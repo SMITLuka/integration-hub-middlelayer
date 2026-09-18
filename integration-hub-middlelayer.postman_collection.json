@@ -1,0 +1,1389 @@
+{
+  "info": {
+    "name": "Integration Hub Middlelayer",
+    "description": "End-to-end smoke-test collection for the Integration Hub Middlelayer REST API. Organized into one folder per resource (Dashboard, Mandators, Companies, Interfaces, Mapping Templates, Configuration Templates, Company Mappings, Company Configurations) plus a final Cleanup folder. Requests are chained via collection variables captured from prior responses (mandatorId, companyId, interfaceId, ...), so running the whole collection top-to-bottom with the Collection Runner exercises create -> read -> update -> resolve/override -> delete across the full object graph.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "mandatorId", "value": "", "type": "string" },
+    { "key": "companyId", "value": "", "type": "string" },
+    { "key": "interfaceId", "value": "", "type": "string" },
+    { "key": "mappingTemplateId", "value": "", "type": "string" },
+    { "key": "mappingTemplateSectionId", "value": "", "type": "string" },
+    { "key": "mappingTemplateRowId", "value": "", "type": "string" },
+    { "key": "configTemplateId", "value": "", "type": "string" },
+    { "key": "configTemplateEntryId", "value": "", "type": "string" },
+    { "key": "companyMappingId", "value": "", "type": "string" },
+    { "key": "companyConfigurationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/dashboard/summary", "host": ["{{baseUrl}}"], "path": ["dashboard", "summary"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mandators",
+      "item": [
+        {
+          "name": "Create Mandator",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Autohaus Rath GmbH\",\n  \"system\": \"DMS\",\n  \"customer\": \"12345\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/mandators", "host": ["{{baseUrl}}"], "path": ["mandators"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has an id\", function () {",
+                  "    pm.expect(jsonData.id).to.not.be.undefined;",
+                  "});",
+                  "pm.collectionVariables.set(\"mandatorId\", jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Mandators",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/mandators?search=&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["mandators"],
+              "query": [
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Mandator",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returned mandator id matches\", function () {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"mandatorId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Mandator",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Autohaus Rath GmbH (Updated)\",\n  \"system\": \"DMS\",\n  \"customer\": \"12345\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Name was updated\", function () {",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Autohaus Rath GmbH (Updated)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Mandator Additional Data",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"AT\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/mandators/{{mandatorId}}/additional-data/Market",
+              "host": ["{{baseUrl}}"],
+              "path": ["mandators", "{{mandatorId}}", "additional-data", "Market"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Mandator Additional Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/mandators/{{mandatorId}}/additional-data",
+              "host": ["{{baseUrl}}"],
+              "path": ["mandators", "{{mandatorId}}", "additional-data"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Contains the Market key\", function () {",
+                  "    var keys = pm.response.json().map(function (entry) { return entry.key; });",
+                  "    pm.expect(keys).to.include(\"Market\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Mandator Additional Data",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/mandators/{{mandatorId}}/additional-data/Market",
+              "host": ["{{baseUrl}}"],
+              "path": ["mandators", "{{mandatorId}}", "additional-data", "Market"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "Create Company",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wien Zentrale\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"countryCode\": \"AT\",\n  \"customerNumber\": \"C-1001\",\n  \"defaultLocale\": \"de-AT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mandators/{{mandatorId}}/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["mandators", "{{mandatorId}}", "companies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has an id\", function () {",
+                  "    pm.expect(jsonData.id).to.not.be.undefined;",
+                  "});",
+                  "pm.collectionVariables.set(\"companyId\", jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Company belongs to the created mandator\", function () {",
+                  "    pm.expect(String(pm.response.json().mandatorId)).to.eql(pm.collectionVariables.get(\"mandatorId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Company",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wien Zentrale (Updated)\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"countryCode\": \"AT\",\n  \"customerNumber\": \"C-1001\",\n  \"defaultLocale\": \"de-AT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Name was updated\", function () {",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Wien Zentrale (Updated)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Company Additional Data",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"CH\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/additional-data/Market",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "additional-data", "Market"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company Additional Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/additional-data",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "additional-data"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Company Additional Data",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/additional-data/Market",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "additional-data", "Market"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Interfaces",
+      "item": [
+        {
+          "name": "Create Interface",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Volvo Grip Api\",\n  \"dmsToMiddlewareUrl\": \"https://dms.example.com/outbound\",\n  \"oemToMiddlewareUrl\": \"https://oem.example.com/inbound\",\n  \"middlewareToOemUrl\": \"https://oem.example.com/api\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/interfaces", "host": ["{{baseUrl}}"], "path": ["interfaces"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has an id\", function () {",
+                  "    pm.expect(jsonData.id).to.not.be.undefined;",
+                  "});",
+                  "pm.collectionVariables.set(\"interfaceId\", jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Interfaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces?search=&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces"],
+              "query": [
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Interface",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/interfaces/{{interfaceId}}", "host": ["{{baseUrl}}"], "path": ["interfaces", "{{interfaceId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Interface",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Volvo Grip Api (Updated)\",\n  \"dmsToMiddlewareUrl\": \"https://dms.example.com/outbound\",\n  \"oemToMiddlewareUrl\": \"https://oem.example.com/inbound\",\n  \"middlewareToOemUrl\": \"https://oem.example.com/api\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/interfaces/{{interfaceId}}", "host": ["{{baseUrl}}"], "path": ["interfaces", "{{interfaceId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Name was updated\", function () {",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Volvo Grip Api (Updated)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Interface Additional Data",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"v2\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/additional-data/ApiVersion",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "additional-data", "ApiVersion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Interface Additional Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/additional-data",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "additional-data"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Interface Additional Data",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/additional-data/ApiVersion",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "additional-data", "ApiVersion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mapping Templates",
+      "item": [
+        {
+          "name": "Create Mapping Template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sections\": [\n    {\n      \"name\": \"Customer Data\",\n      \"sortOrder\": 1,\n      \"rows\": [\n        {\n          \"descriptor\": \"Customer Number\",\n          \"thirdPartyValue\": \"CUST_NO\",\n          \"sortOrder\": 1\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/mapping-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "mapping-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"mappingTemplateId\", jsonData.id);",
+                  "pm.collectionVariables.set(\"mappingTemplateSectionId\", jsonData.sections[0].id);",
+                  "pm.collectionVariables.set(\"mappingTemplateRowId\", jsonData.sections[0].rows[0].id);",
+                  "pm.test(\"Template has one section with one row\", function () {",
+                  "    pm.expect(jsonData.sections).to.have.lengthOf(1);",
+                  "    pm.expect(jsonData.sections[0].rows).to.have.lengthOf(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Mapping Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/mapping-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "mapping-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace Mapping Template",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sections\": [\n    {\n      \"name\": \"Customer Data\",\n      \"sortOrder\": 1,\n      \"rows\": [\n        {\n          \"descriptor\": \"Customer Number\",\n          \"thirdPartyValue\": \"CUST_NO\",\n          \"sortOrder\": 1\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/mapping-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "mapping-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "// A full replace clears and re-creates rows, so ids captured before this call are now stale.",
+                  "// Re-capture them here so later folders (Company Mappings) use the current, valid row id.",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"mappingTemplateId\", jsonData.id);",
+                  "pm.collectionVariables.set(\"mappingTemplateSectionId\", jsonData.sections[0].id);",
+                  "pm.collectionVariables.set(\"mappingTemplateRowId\", jsonData.sections[0].rows[0].id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Configuration Templates",
+      "item": [
+        {
+          "name": "Create Configuration Template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entries\": [\n    {\n      \"key\": \"Market\",\n      \"type\": \"TEXT\",\n      \"defaultValue\": \"AT\",\n      \"expression\": null,\n      \"description\": \"Target market\",\n      \"sortOrder\": 1\n    },\n    {\n      \"key\": \"TimeoutSeconds\",\n      \"type\": \"NUMBER\",\n      \"defaultValue\": \"30\",\n      \"expression\": null,\n      \"description\": \"Request timeout\",\n      \"sortOrder\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/configuration-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "configuration-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"configTemplateId\", jsonData.id);",
+                  "var marketEntry = jsonData.entries.find(function (entry) { return entry.key === \"Market\"; });",
+                  "pm.test(\"Market entry was created\", function () {",
+                  "    pm.expect(marketEntry).to.not.be.undefined;",
+                  "});",
+                  "pm.collectionVariables.set(\"configTemplateEntryId\", marketEntry.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Configuration Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/configuration-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "configuration-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace Configuration Template",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entries\": [\n    {\n      \"key\": \"Market\",\n      \"type\": \"TEXT\",\n      \"defaultValue\": \"AT\",\n      \"expression\": null,\n      \"description\": \"Target market\",\n      \"sortOrder\": 1\n    },\n    {\n      \"key\": \"TimeoutSeconds\",\n      \"type\": \"NUMBER\",\n      \"defaultValue\": \"30\",\n      \"expression\": null,\n      \"description\": \"Request timeout\",\n      \"sortOrder\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/configuration-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "configuration-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "// A full replace clears and re-creates entries, so ids captured before this call are now stale.",
+                  "// Re-capture them here so later folders (Company Configurations) use the current, valid entry id.",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"configTemplateId\", jsonData.id);",
+                  "var marketEntry = jsonData.entries.find(function (entry) { return entry.key === \"Market\"; });",
+                  "pm.collectionVariables.set(\"configTemplateEntryId\", marketEntry.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Company Mappings",
+      "item": [
+        {
+          "name": "Create Company Mapping",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"interfaceId\": {{interfaceId}}\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"companyMappingId\", jsonData.id);",
+                  "pm.test(\"Row resolves at TEMPLATE level with the template's third-party value\", function () {",
+                  "    var row = jsonData.sections[0].rows[0];",
+                  "    pm.expect(row.sourceLevel).to.eql(\"TEMPLATE\");",
+                  "    pm.expect(row.effectiveValue).to.eql(\"CUST_NO\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Company Mapping - Duplicate (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"interfaceId\": {{interfaceId}}\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Error code is DUPLICATE_COMPANY_MAPPING\", function () {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"DUPLICATE_COMPANY_MAPPING\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Company Mappings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company Mapping Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings/{{companyMappingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings", "{{companyMappingId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Row Override",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"CUST_NR_OVERRIDE\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings/{{companyMappingId}}/rows/{{mappingTemplateRowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings", "{{companyMappingId}}", "rows", "{{mappingTemplateRowId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Row now resolves at OVERRIDE level with the new value\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.sourceLevel).to.eql(\"OVERRIDE\");",
+                  "    pm.expect(jsonData.effectiveValue).to.eql(\"CUST_NR_OVERRIDE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Row Override",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings/{{companyMappingId}}/rows/{{mappingTemplateRowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings", "{{companyMappingId}}", "rows", "{{mappingTemplateRowId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Row falls back to TEMPLATE level with the original value\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.sourceLevel).to.eql(\"TEMPLATE\");",
+                  "    pm.expect(jsonData.effectiveValue).to.eql(\"CUST_NO\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Company Configurations",
+      "item": [
+        {
+          "name": "Create Company Configuration",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"interfaceId\": {{interfaceId}}\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "configurations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"companyConfigurationId\", jsonData.id);",
+                  "pm.test(\"Every entry resolves at TEMPLATE level\", function () {",
+                  "    jsonData.entries.forEach(function (entry) {",
+                  "        pm.expect(entry.sourceLevel).to.eql(\"TEMPLATE\");",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Company Configuration - Duplicate (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"interfaceId\": {{interfaceId}}\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "configurations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Error code is DUPLICATE_CONFIGURATION\", function () {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"DUPLICATE_CONFIGURATION\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Company Configurations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "configurations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Company Configuration Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations/{{companyConfigurationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "configurations", "{{companyConfigurationId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Entry Override",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"IT\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations/{{companyConfigurationId}}/entries/{{configTemplateEntryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "companies",
+                "{{companyId}}",
+                "configurations",
+                "{{companyConfigurationId}}",
+                "entries",
+                "{{configTemplateEntryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Entry now resolves at OVERRIDE level with the new value\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.sourceLevel).to.eql(\"OVERRIDE\");",
+                  "    pm.expect(jsonData.effectiveValue).to.eql(\"IT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Entry Override",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations/{{companyConfigurationId}}/entries/{{configTemplateEntryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "companies",
+                "{{companyId}}",
+                "configurations",
+                "{{companyConfigurationId}}",
+                "entries",
+                "{{configTemplateEntryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Entry falls back to TEMPLATE level with the original default value\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.sourceLevel).to.eql(\"TEMPLATE\");",
+                  "    pm.expect(jsonData.effectiveValue).to.eql(\"AT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "description": "Teardown, run last: deletes the whole object graph created above in the order the foreign-key / in-use business rules require (leaf entries first, Mandator last), and includes the MandatorHasCompaniesException regression check before the owning Company is removed.",
+      "item": [
+        {
+          "name": "Delete Mandator - expect 409 (still has a Company)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Error code is MANDATOR_HAS_COMPANIES\", function () {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"MANDATOR_HAS_COMPANIES\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Company Configuration",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/configurations/{{companyConfigurationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "configurations", "{{companyConfigurationId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Company Mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/mappings/{{companyMappingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "mappings", "{{companyMappingId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Configuration Template",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/configuration-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "configuration-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Mapping Template",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/interfaces/{{interfaceId}}/mapping-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["interfaces", "{{interfaceId}}", "mapping-template"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Company",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Interface",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/interfaces/{{interfaceId}}", "host": ["{{baseUrl}}"], "path": ["interfaces", "{{interfaceId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Mandator",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Mandator - expect 404 (confirms deletion)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
