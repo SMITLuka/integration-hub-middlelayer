@@ -46,7 +46,7 @@ class CompanyControllerTest
 
     private static CompanyDetailDto detail(Long id)
     {
-        return new CompanyDetailDto(id, 1L, "Autohaus Rath GmbH", "Taferner - 10472", "1", "Vienna", "AT", "10472", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$
+        return new CompanyDetailDto(id, 1L, "Autohaus Rath GmbH", "Taferner - 10472", "1", "Vienna", "Slavonska avenija 11d", "AT", "10472", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$
                 List.of(), List.of());
     }
 
@@ -59,7 +59,8 @@ class CompanyControllerTest
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Taferner - 10472\"}")) //$NON-NLS-1$
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Taferner - 10472")); //$NON-NLS-1$ //$NON-NLS-2$
+                .andExpect(jsonPath("$.name").value("Taferner - 10472")) //$NON-NLS-1$ //$NON-NLS-2$
+                .andExpect(jsonPath("$.address").value("Slavonska avenija 11d")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Test

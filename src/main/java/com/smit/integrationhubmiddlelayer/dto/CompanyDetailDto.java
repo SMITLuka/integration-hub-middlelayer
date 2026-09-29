@@ -18,6 +18,7 @@ public class CompanyDetailDto
     private String name;
     private String dmsCompanyId;
     private String location;
+    private String address;
     private String countryCode;
     private String customerNumber;
     private String defaultLocale;

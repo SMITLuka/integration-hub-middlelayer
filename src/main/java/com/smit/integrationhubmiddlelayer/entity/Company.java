@@ -56,6 +56,7 @@ public class Company
     private String dmsCompanyId;
 
     private String location;
+    private String address;
 
     @Column(name = "country_code") //$NON-NLS-1$
     private String countryCode;

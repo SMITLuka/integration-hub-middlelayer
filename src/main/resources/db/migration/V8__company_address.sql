@@ -1,0 +1,1 @@
+ALTER TABLE company ADD COLUMN address VARCHAR(255);

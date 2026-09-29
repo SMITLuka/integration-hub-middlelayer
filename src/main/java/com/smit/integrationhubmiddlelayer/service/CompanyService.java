@@ -38,17 +38,18 @@ public class CompanyService
     {
         Mandator mandator = mandatorService.findOrThrow(mandatorId);
 
-        if (StringUtils.hasText(request.getDmsCompanyId())
-                && companyRepository.findByMandatorIdAndDmsCompanyId(mandatorId, request.getDmsCompanyId()).isPresent())
+        String dmsCompanyId = normalizeDmsCompanyId(request.getDmsCompanyId());
+        if (dmsCompanyId != null && companyRepository.findByMandatorIdAndDmsCompanyId(mandatorId, dmsCompanyId).isPresent())
         {
-            throw new DuplicateCompanyException(mandatorId, request.getDmsCompanyId());
+            throw new DuplicateCompanyException(mandatorId, dmsCompanyId);
         }
 
         Company company = Company.builder()
                 .mandator(mandator)
                 .name(request.getName())
-                .dmsCompanyId(request.getDmsCompanyId())
+                .dmsCompanyId(dmsCompanyId)
                 .location(request.getLocation())
+                .address(request.getAddress())
                 .countryCode(request.getCountryCode())
                 .customerNumber(request.getCustomerNumber())
                 .defaultLocale(request.getDefaultLocale())
@@ -68,9 +69,22 @@ public class CompanyService
     public CompanyDetailDto update(Long companyId, CompanyUpdateRequest request)
     {
         Company company = findOrThrow(companyId);
+        Long mandatorId = company.getMandator().getId();
+        String dmsCompanyId = normalizeDmsCompanyId(request.getDmsCompanyId());
+        if (dmsCompanyId != null)
+        {
+            companyRepository.findByMandatorIdAndDmsCompanyId(mandatorId, dmsCompanyId)
+                    .filter(existing -> !existing.getId().equals(companyId))
+                    .ifPresent(existing ->
+                    {
+                        throw new DuplicateCompanyException(mandatorId, dmsCompanyId);
+                    });
+        }
+
         company.setName(request.getName());
-        company.setDmsCompanyId(request.getDmsCompanyId());
+        company.setDmsCompanyId(dmsCompanyId);
         company.setLocation(request.getLocation());
+        company.setAddress(request.getAddress());
         company.setCountryCode(request.getCountryCode());
         company.setCustomerNumber(request.getCustomerNumber());
         company.setDefaultLocale(request.getDefaultLocale());
@@ -90,10 +104,19 @@ public class CompanyService
         return companyRepository.findById(companyId).orElseThrow(() -> new CompanyNotFoundException(companyId));
     }
 
+    /**
+     * (mandator_id, dms_company_id) is UNIQUE: PostgreSQL allows many NULLs there but only one
+     * empty string per Mandator, so a blank ID (the UI sends "" for an empty field) must be stored as NULL.
+     */
+    private static String normalizeDmsCompanyId(String dmsCompanyId)
+    {
+        return StringUtils.hasText(dmsCompanyId) ? dmsCompanyId : null;
+    }
+
     private CompanyDetailDto toDetailDto(Company company)
     {
         return new CompanyDetailDto(company.getId(), company.getMandator().getId(), company.getMandator().getName(),
-                company.getName(), company.getDmsCompanyId(), company.getLocation(), company.getCountryCode(),
+                company.getName(), company.getDmsCompanyId(), company.getLocation(), company.getAddress(), company.getCountryCode(),
                 company.getCustomerNumber(), company.getDefaultLocale(), companyMappingService.list(company.getId()),
                 companyConfigurationService.list(company.getId()));
     }
