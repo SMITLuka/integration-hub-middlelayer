@@ -20,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -107,24 +109,63 @@ public class ConfigurationTemplateService
         }
     }
 
+    /**
+     * Merges the requested entries into the template instead of recreating them: existing entries
+     * (matched by id) are updated in place so their ids stay stable, because Company Configuration
+     * overrides reference them by id. Removals and updates are flushed before new entries are
+     * inserted; Hibernate would otherwise insert first and hit the UNIQUE (template, key) constraint
+     * when a new entry reuses a key that was just removed or renamed.
+     */
     private void applyEntries(ConfigurationTemplate configurationTemplate, List<ConfigurationTemplateEntryDto> entryDtos)
     {
         List<ConfigurationTemplateEntryDto> source = entryDtos != null ? entryDtos : List.of();
-        List<ConfigurationTemplateEntry> entries = new ArrayList<>();
+        Map<Long, ConfigurationTemplateEntry> existingById = new HashMap<>();
+        configurationTemplate.getEntries().forEach(entry -> existingById.put(entry.getId(), entry));
+
+        Set<Long> requestedIds = new HashSet<>();
+        source.forEach(entryDto -> requestedIds.add(entryDto.getId()));
+        configurationTemplate.getEntries().removeIf(entry -> !requestedIds.contains(entry.getId()));
+        flushIfPersisted(configurationTemplate);
+
+        List<ConfigurationTemplateEntryDto> newEntryDtos = new ArrayList<>();
         for (ConfigurationTemplateEntryDto entryDto : source)
         {
-            entries.add(ConfigurationTemplateEntry.builder()
-                    .configurationTemplate(configurationTemplate)
-                    .key(entryDto.getKey())
-                    .type(entryDto.getType())
-                    .defaultValue(entryDto.getDefaultValue())
-                    .expression(entryDto.getExpression())
-                    .description(entryDto.getDescription())
-                    .sortOrder(entryDto.getSortOrder())
-                    .build());
+            ConfigurationTemplateEntry existing = entryDto.getId() != null ? existingById.get(entryDto.getId()) : null;
+            if (existing != null)
+            {
+                copyFields(entryDto, existing);
+            }
+            else
+            {
+                newEntryDtos.add(entryDto);
+            }
         }
-        configurationTemplate.getEntries().clear();
-        configurationTemplate.getEntries().addAll(entries);
+        flushIfPersisted(configurationTemplate);
+
+        for (ConfigurationTemplateEntryDto entryDto : newEntryDtos)
+        {
+            ConfigurationTemplateEntry entry = ConfigurationTemplateEntry.builder().configurationTemplate(configurationTemplate).build();
+            copyFields(entryDto, entry);
+            configurationTemplate.getEntries().add(entry);
+        }
+    }
+
+    private void flushIfPersisted(ConfigurationTemplate configurationTemplate)
+    {
+        if (configurationTemplate.getId() != null)
+        {
+            configurationTemplateRepository.flush();
+        }
+    }
+
+    private static void copyFields(ConfigurationTemplateEntryDto source, ConfigurationTemplateEntry target)
+    {
+        target.setKey(source.getKey());
+        target.setType(source.getType());
+        target.setDefaultValue(source.getDefaultValue());
+        target.setExpression(source.getExpression());
+        target.setDescription(source.getDescription());
+        target.setSortOrder(source.getSortOrder());
     }
 
     private ConfigurationTemplate findOrThrow(Long interfaceId)

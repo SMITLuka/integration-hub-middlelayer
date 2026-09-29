@@ -21,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Create/read/full-replace/delete of an Interface's Mapping Template (Sections of Rows).
@@ -90,35 +92,64 @@ public class MappingTemplateService
         log.info("Deleted mapping template for interfaceId={}", interfaceId); //$NON-NLS-1$
     }
 
+    /**
+     * Merges the requested sections and rows into the template instead of recreating them: existing
+     * sections and rows (matched by id) are updated in place so their ids stay stable, because
+     * Company Mapping values reference template rows by id. Items missing from the request are removed.
+     */
     private void applySections(MappingTemplate mappingTemplate, List<MappingTemplateSectionDto> sectionDtos)
     {
         List<MappingTemplateSectionDto> sourceSections = sectionDtos != null ? sectionDtos : List.of();
+        Map<Long, MappingTemplateSection> existingById = new HashMap<>();
+        mappingTemplate.getSections().forEach(section -> existingById.put(section.getId(), section));
+
         List<MappingTemplateSection> sections = new ArrayList<>();
         for (MappingTemplateSectionDto sectionDto : sourceSections)
         {
-            MappingTemplateSection section = MappingTemplateSection.builder()
-                    .mappingTemplate(mappingTemplate)
-                    .name(sectionDto.getName())
-                    .sortOrder(sectionDto.getSortOrder())
-                    .build();
-
-            List<MappingTemplateRowDto> sourceRows = sectionDto.getRows() != null ? sectionDto.getRows() : List.of();
-            List<MappingTemplateRow> rows = new ArrayList<>();
-            for (MappingTemplateRowDto rowDto : sourceRows)
+            MappingTemplateSection section = sectionDto.getId() != null ? existingById.get(sectionDto.getId()) : null;
+            if (section == null)
             {
-                rows.add(MappingTemplateRow.builder()
-                        .section(section)
-                        .descriptor(rowDto.getDescriptor())
-                        .thirdPartyValue(rowDto.getThirdPartyValue())
-                        .sortOrder(rowDto.getSortOrder())
-                        .build());
+                section = MappingTemplateSection.builder().mappingTemplate(mappingTemplate).build();
             }
-            section.getRows().clear();
-            section.getRows().addAll(rows);
+            section.setName(sectionDto.getName());
+            section.setSortOrder(sectionDto.getSortOrder());
+            applyRows(section, sectionDto.getRows());
             sections.add(section);
         }
-        mappingTemplate.getSections().clear();
-        mappingTemplate.getSections().addAll(sections);
+        replaceContents(mappingTemplate.getSections(), sections);
+    }
+
+    private void applyRows(MappingTemplateSection section, List<MappingTemplateRowDto> rowDtos)
+    {
+        List<MappingTemplateRowDto> sourceRows = rowDtos != null ? rowDtos : List.of();
+        Map<Long, MappingTemplateRow> existingById = new HashMap<>();
+        section.getRows().forEach(row -> existingById.put(row.getId(), row));
+
+        List<MappingTemplateRow> rows = new ArrayList<>();
+        for (MappingTemplateRowDto rowDto : sourceRows)
+        {
+            MappingTemplateRow row = rowDto.getId() != null ? existingById.get(rowDto.getId()) : null;
+            if (row == null)
+            {
+                row = MappingTemplateRow.builder().section(section).build();
+            }
+            row.setDescriptor(rowDto.getDescriptor());
+            row.setThirdPartyValue(rowDto.getThirdPartyValue());
+            row.setSortOrder(rowDto.getSortOrder());
+            rows.add(row);
+        }
+        replaceContents(section.getRows(), rows);
+    }
+
+    /**
+     * Keeps the same (Hibernate-managed) collection instance, which orphanRemoval requires; replacing
+     * the collection object itself would fail. Kept elements are the same instances, so they are
+     * updated rather than deleted and re-inserted.
+     */
+    private static <T> void replaceContents(List<T> target, List<T> newContents)
+    {
+        target.clear();
+        target.addAll(newContents);
     }
 
     private MappingTemplate findOrThrow(Long interfaceId)
