@@ -11,4 +11,6 @@ public interface CompanyConfigurationOverrideRepository extends JpaRepository<Co
     List<CompanyConfigurationOverride> findByCompanyConfigurationId(Long companyConfigurationId);
 
     Optional<CompanyConfigurationOverride> findByCompanyConfigurationIdAndTemplateEntryId(Long companyConfigurationId, Long templateEntryId);
+
+    boolean existsByTemplateEntryId(Long templateEntryId);
 }

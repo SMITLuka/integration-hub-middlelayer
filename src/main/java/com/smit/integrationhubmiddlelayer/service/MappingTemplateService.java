@@ -12,7 +12,9 @@ import com.smit.integrationhubmiddlelayer.exception.DuplicateMappingTemplateExce
 import com.smit.integrationhubmiddlelayer.exception.InterfaceNotFoundException;
 import com.smit.integrationhubmiddlelayer.exception.MappingTemplateInUseException;
 import com.smit.integrationhubmiddlelayer.exception.MappingTemplateNotFoundException;
+import com.smit.integrationhubmiddlelayer.exception.MappingTemplateRowInUseException;
 import com.smit.integrationhubmiddlelayer.repository.CompanyMappingRepository;
+import com.smit.integrationhubmiddlelayer.repository.CompanyMappingValueRepository;
 import com.smit.integrationhubmiddlelayer.repository.InterfaceRepository;
 import com.smit.integrationhubmiddlelayer.repository.MappingTemplateRepository;
 import org.slf4j.Logger;
@@ -22,8 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Create/read/full-replace/delete of an Interface's Mapping Template (Sections of Rows).
@@ -37,13 +41,15 @@ public class MappingTemplateService
     private final InterfaceRepository interfaceRepository;
     private final MappingTemplateRepository mappingTemplateRepository;
     private final CompanyMappingRepository companyMappingRepository;
+    private final CompanyMappingValueRepository companyMappingValueRepository;
 
     public MappingTemplateService(InterfaceRepository interfaceRepository, MappingTemplateRepository mappingTemplateRepository,
-            CompanyMappingRepository companyMappingRepository)
+            CompanyMappingRepository companyMappingRepository, CompanyMappingValueRepository companyMappingValueRepository)
     {
         this.interfaceRepository = interfaceRepository;
         this.mappingTemplateRepository = mappingTemplateRepository;
         this.companyMappingRepository = companyMappingRepository;
+        this.companyMappingValueRepository = companyMappingValueRepository;
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +106,7 @@ public class MappingTemplateService
     private void applySections(MappingTemplate mappingTemplate, List<MappingTemplateSectionDto> sectionDtos)
     {
         List<MappingTemplateSectionDto> sourceSections = sectionDtos != null ? sectionDtos : List.of();
+        rejectRemovalOfRowsInUse(mappingTemplate, sourceSections);
         Map<Long, MappingTemplateSection> existingById = new HashMap<>();
         mappingTemplate.getSections().forEach(section -> existingById.put(section.getId(), section));
 
@@ -117,6 +124,32 @@ public class MappingTemplateService
             sections.add(section);
         }
         replaceContents(mappingTemplate.getSections(), sections);
+    }
+
+    /**
+     * Checked before anything is changed: a row that Company Mappings still hold values for must not be
+     * removed, either directly or together with its section, or the database rejects the save with a 500.
+     */
+    private void rejectRemovalOfRowsInUse(MappingTemplate mappingTemplate, List<MappingTemplateSectionDto> sourceSections)
+    {
+        Map<Long, Set<Long>> requestedRowIdsBySection = new HashMap<>();
+        for (MappingTemplateSectionDto sectionDto : sourceSections)
+        {
+            Set<Long> rowIds = new HashSet<>();
+            (sectionDto.getRows() != null ? sectionDto.getRows() : List.<MappingTemplateRowDto>of()).forEach(rowDto -> rowIds.add(rowDto.getId()));
+            requestedRowIdsBySection.put(sectionDto.getId(), rowIds);
+        }
+        for (MappingTemplateSection section : mappingTemplate.getSections())
+        {
+            Set<Long> keptRowIds = requestedRowIdsBySection.getOrDefault(section.getId(), Set.of());
+            for (MappingTemplateRow row : section.getRows())
+            {
+                if (!keptRowIds.contains(row.getId()) && companyMappingValueRepository.existsByTemplateRowId(row.getId()))
+                {
+                    throw new MappingTemplateRowInUseException(row.getDescriptor());
+                }
+            }
+        }
     }
 
     private void applyRows(MappingTemplateSection section, List<MappingTemplateRowDto> rowDtos)

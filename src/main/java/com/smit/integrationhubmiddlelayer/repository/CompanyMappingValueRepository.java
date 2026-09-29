@@ -11,4 +11,6 @@ public interface CompanyMappingValueRepository extends JpaRepository<CompanyMapp
     List<CompanyMappingValue> findByCompanyMappingId(Long companyMappingId);
 
     Optional<CompanyMappingValue> findByCompanyMappingIdAndTemplateRowId(Long companyMappingId, Long templateRowId);
+
+    boolean existsByTemplateRowId(Long templateRowId);
 }

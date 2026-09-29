@@ -6,6 +6,8 @@ import com.smit.integrationhubmiddlelayer.entity.ConfigValueType;
 import com.smit.integrationhubmiddlelayer.entity.ConfigurationTemplate;
 import com.smit.integrationhubmiddlelayer.entity.ConfigurationTemplateEntry;
 import com.smit.integrationhubmiddlelayer.entity.Interface;
+import com.smit.integrationhubmiddlelayer.exception.ConfigurationTemplateEntryInUseException;
+import com.smit.integrationhubmiddlelayer.repository.CompanyConfigurationOverrideRepository;
 import com.smit.integrationhubmiddlelayer.repository.CompanyConfigurationRepository;
 import com.smit.integrationhubmiddlelayer.repository.ConfigurationTemplateRepository;
 import com.smit.integrationhubmiddlelayer.repository.InterfaceRepository;
@@ -22,8 +24,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -48,6 +52,9 @@ class ConfigurationTemplateServiceTest
     @Mock
     private CompanyConfigurationRepository companyConfigurationRepository;
 
+    @Mock
+    private CompanyConfigurationOverrideRepository companyConfigurationOverrideRepository;
+
     @InjectMocks
     private ConfigurationTemplateService configurationTemplateService;
 
@@ -65,7 +72,7 @@ class ConfigurationTemplateServiceTest
 
         when(interfaceRepository.findById(INTERFACE_ID)).thenReturn(Optional.of(interfaceEntity));
         when(configurationTemplateRepository.findByInterfaceEntityId(INTERFACE_ID)).thenReturn(Optional.of(template));
-        when(configurationTemplateRepository.save(any(ConfigurationTemplate.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(configurationTemplateRepository.save(any(ConfigurationTemplate.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -99,6 +106,20 @@ class ConfigurationTemplateServiceTest
         order.verify(configurationTemplateRepository, times(2)).flush();
         order.verify(configurationTemplateRepository).save(template);
         assertThat(template.getEntries()).extracting(ConfigurationTemplateEntry::getKey).containsExactly("SPA_URL", "SPA_USER"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    @Test
+    void replace_rejectsRemovingEntryStillOverriddenByACompany()
+    {
+        when(companyConfigurationOverrideRepository.existsByTemplateEntryId(2L)).thenReturn(true);
+        ConfigurationTemplateUpsertRequest request = new ConfigurationTemplateUpsertRequest();
+        request.setEntries(List.of(dto(1L, "SPA_URL", ""))); //$NON-NLS-1$ //$NON-NLS-2$
+
+        assertThatThrownBy(() -> configurationTemplateService.replace(INTERFACE_ID, request))
+                .isInstanceOf(ConfigurationTemplateEntryInUseException.class)
+                .hasMessageContaining("SPA_USER"); //$NON-NLS-1$
+        assertThat(template.getEntries()).hasSize(2);
+        verify(configurationTemplateRepository, never()).save(any());
     }
 
     @Test

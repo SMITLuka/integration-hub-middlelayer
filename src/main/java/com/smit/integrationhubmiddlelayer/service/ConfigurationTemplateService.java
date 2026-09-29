@@ -6,11 +6,13 @@ import com.smit.integrationhubmiddlelayer.dto.ConfigurationTemplateUpsertRequest
 import com.smit.integrationhubmiddlelayer.entity.ConfigurationTemplate;
 import com.smit.integrationhubmiddlelayer.entity.ConfigurationTemplateEntry;
 import com.smit.integrationhubmiddlelayer.entity.Interface;
+import com.smit.integrationhubmiddlelayer.exception.ConfigurationTemplateEntryInUseException;
 import com.smit.integrationhubmiddlelayer.exception.ConfigurationTemplateInUseException;
 import com.smit.integrationhubmiddlelayer.exception.ConfigurationTemplateNotFoundException;
 import com.smit.integrationhubmiddlelayer.exception.DuplicateConfigurationTemplateException;
 import com.smit.integrationhubmiddlelayer.exception.DuplicateConfigurationTemplateKeyException;
 import com.smit.integrationhubmiddlelayer.exception.InterfaceNotFoundException;
+import com.smit.integrationhubmiddlelayer.repository.CompanyConfigurationOverrideRepository;
 import com.smit.integrationhubmiddlelayer.repository.CompanyConfigurationRepository;
 import com.smit.integrationhubmiddlelayer.repository.ConfigurationTemplateRepository;
 import com.smit.integrationhubmiddlelayer.repository.InterfaceRepository;
@@ -38,14 +40,17 @@ public class ConfigurationTemplateService
     private final InterfaceRepository interfaceRepository;
     private final ConfigurationTemplateRepository configurationTemplateRepository;
     private final CompanyConfigurationRepository companyConfigurationRepository;
+    private final CompanyConfigurationOverrideRepository companyConfigurationOverrideRepository;
 
     public ConfigurationTemplateService(InterfaceRepository interfaceRepository,
             ConfigurationTemplateRepository configurationTemplateRepository,
-            CompanyConfigurationRepository companyConfigurationRepository)
+            CompanyConfigurationRepository companyConfigurationRepository,
+            CompanyConfigurationOverrideRepository companyConfigurationOverrideRepository)
     {
         this.interfaceRepository = interfaceRepository;
         this.configurationTemplateRepository = configurationTemplateRepository;
         this.companyConfigurationRepository = companyConfigurationRepository;
+        this.companyConfigurationOverrideRepository = companyConfigurationOverrideRepository;
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +129,13 @@ public class ConfigurationTemplateService
 
         Set<Long> requestedIds = new HashSet<>();
         source.forEach(entryDto -> requestedIds.add(entryDto.getId()));
+        for (ConfigurationTemplateEntry entry : configurationTemplate.getEntries())
+        {
+            if (!requestedIds.contains(entry.getId()) && companyConfigurationOverrideRepository.existsByTemplateEntryId(entry.getId()))
+            {
+                throw new ConfigurationTemplateEntryInUseException(entry.getKey());
+            }
+        }
         configurationTemplate.getEntries().removeIf(entry -> !requestedIds.contains(entry.getId()));
         flushIfPersisted(configurationTemplate);
 

@@ -7,7 +7,9 @@ import com.smit.integrationhubmiddlelayer.entity.Interface;
 import com.smit.integrationhubmiddlelayer.entity.MappingTemplate;
 import com.smit.integrationhubmiddlelayer.entity.MappingTemplateRow;
 import com.smit.integrationhubmiddlelayer.entity.MappingTemplateSection;
+import com.smit.integrationhubmiddlelayer.exception.MappingTemplateRowInUseException;
 import com.smit.integrationhubmiddlelayer.repository.CompanyMappingRepository;
+import com.smit.integrationhubmiddlelayer.repository.CompanyMappingValueRepository;
 import com.smit.integrationhubmiddlelayer.repository.InterfaceRepository;
 import com.smit.integrationhubmiddlelayer.repository.MappingTemplateRepository;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -42,6 +47,9 @@ class MappingTemplateServiceTest
 
     @Mock
     private CompanyMappingRepository companyMappingRepository;
+
+    @Mock
+    private CompanyMappingValueRepository companyMappingValueRepository;
 
     @InjectMocks
     private MappingTemplateService mappingTemplateService;
@@ -90,5 +98,29 @@ class MappingTemplateServiceTest
         assertThat(vehicleSection.getName()).isEqualTo("Vehicle Data"); //$NON-NLS-1$
         assertThat(vehicleSection.getMappingTemplate()).isSameAs(template);
         assertThat(vehicleSection.getRows()).extracting(MappingTemplateRow::getDescriptor).containsExactly("VIN"); //$NON-NLS-1$
+    }
+
+    @Test
+    void replace_rejectsRemovingRowStillUsedByACompanyMapping_alsoWhenItsSectionIsRemoved()
+    {
+        Interface interfaceEntity = Interface.builder().id(INTERFACE_ID).name("SPA Integration").build(); //$NON-NLS-1$
+        MappingTemplate template = MappingTemplate.builder().id(5L).interfaceEntity(interfaceEntity).sections(new ArrayList<>()).build();
+        MappingTemplateSection section = MappingTemplateSection.builder().id(10L).mappingTemplate(template)
+                .name("Customer Data").rows(new ArrayList<>()).build(); //$NON-NLS-1$
+        section.getRows().add(MappingTemplateRow.builder().id(100L).section(section).descriptor("Customer Number").build()); //$NON-NLS-1$
+        template.getSections().add(section);
+
+        when(interfaceRepository.findById(INTERFACE_ID)).thenReturn(Optional.of(interfaceEntity));
+        when(mappingTemplateRepository.findByInterfaceEntityId(INTERFACE_ID)).thenReturn(Optional.of(template));
+        when(companyMappingValueRepository.existsByTemplateRowId(100L)).thenReturn(true);
+
+        MappingTemplateUpsertRequest request = new MappingTemplateUpsertRequest();
+        request.setSections(List.of());
+
+        assertThatThrownBy(() -> mappingTemplateService.replace(INTERFACE_ID, request))
+                .isInstanceOf(MappingTemplateRowInUseException.class)
+                .hasMessageContaining("Customer Number"); //$NON-NLS-1$
+        assertThat(template.getSections()).containsExactly(section);
+        verify(mappingTemplateRepository, never()).save(any());
     }
 }
