@@ -2,6 +2,7 @@ package com.smit.integrationhubmiddlelayer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -12,7 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /**
  * Shared base for full-stack integration tests: boots the application on a random port
  * against a single, test-run-wide real Postgres container (Testcontainers), with Flyway
- * migrating the actual schema (V1-V6) on startup. Subclasses get a real {@link TestRestTemplate}
+ * migrating the actual schema on startup. Subclasses get a real {@link TestRestTemplate}
  * wired to that running instance, so they exercise the full controller -> service ->
  * repository -> database stack rather than mocking any layer.
  * <p>
@@ -22,6 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 public abstract class AbstractIntegrationTest
 {
     @Container

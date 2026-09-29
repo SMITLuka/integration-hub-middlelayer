@@ -50,17 +50,19 @@ public class MandatorService
 
     public MandatorDetailDto create(MandatorCreateRequest request)
     {
-        if (StringUtils.hasText(request.getExternalMandatorId())
-                && mandatorRepository.findByExternalMandatorId(request.getExternalMandatorId()).isPresent())
+        String externalMandatorId = normalizeExternalMandatorId(request.getExternalMandatorId());
+        if (externalMandatorId != null && mandatorRepository.findByExternalMandatorId(externalMandatorId).isPresent())
         {
-            throw new DuplicateMandatorException(request.getExternalMandatorId());
+            throw new DuplicateMandatorException(externalMandatorId);
         }
 
         Mandator mandator = Mandator.builder()
                 .name(request.getName())
                 .system(request.getSystem())
-                .customer(request.getCustomer())
-                .externalMandatorId(request.getExternalMandatorId())
+                .personalIdentificationNumber(request.getPersonalIdentificationNumber())
+                .externalMandatorId(externalMandatorId)
+                .hostUrl(request.getHostUrl())
+                .port(request.getPort())
                 .country(request.getCountry())
                 .locale(request.getLocale())
                 .build();
@@ -79,10 +81,23 @@ public class MandatorService
     public MandatorDetailDto update(Long mandatorId, MandatorUpdateRequest request)
     {
         Mandator mandator = findOrThrow(mandatorId);
+        String externalMandatorId = normalizeExternalMandatorId(request.getExternalMandatorId());
+        if (externalMandatorId != null)
+        {
+            mandatorRepository.findByExternalMandatorId(externalMandatorId)
+                    .filter(existing -> !existing.getId().equals(mandatorId))
+                    .ifPresent(existing ->
+                    {
+                        throw new DuplicateMandatorException(externalMandatorId);
+                    });
+        }
+
         mandator.setName(request.getName());
         mandator.setSystem(request.getSystem());
-        mandator.setCustomer(request.getCustomer());
-        mandator.setExternalMandatorId(request.getExternalMandatorId());
+        mandator.setPersonalIdentificationNumber(request.getPersonalIdentificationNumber());
+        mandator.setExternalMandatorId(externalMandatorId);
+        mandator.setHostUrl(request.getHostUrl());
+        mandator.setPort(request.getPort());
         mandator.setCountry(request.getCountry());
         mandator.setLocale(request.getLocale());
         log.info("Updated mandator id={}", mandatorId); //$NON-NLS-1$
@@ -131,10 +146,20 @@ public class MandatorService
         return mandatorRepository.findById(mandatorId).orElseThrow(() -> new MandatorNotFoundException(mandatorId));
     }
 
+    /**
+     * The external_mandator_id column is UNIQUE: PostgreSQL allows many NULLs there but only one
+     * empty string, so a blank ID (the UI sends "" for an empty field) must be stored as NULL.
+     */
+    private static String normalizeExternalMandatorId(String externalMandatorId)
+    {
+        return StringUtils.hasText(externalMandatorId) ? externalMandatorId : null;
+    }
+
     private MandatorSummaryDto toSummaryDto(Mandator mandator)
     {
-        return new MandatorSummaryDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getCustomer(),
-                mandator.getExternalMandatorId(), mandator.getCountry(), mandator.getLocale(), mandator.getCompanies().size());
+        return new MandatorSummaryDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
+                mandator.getExternalMandatorId(), mandator.getHostUrl(), mandator.getPort(), mandator.getCountry(), mandator.getLocale(),
+                mandator.getCompanies().size());
     }
 
     private MandatorDetailDto toDetailDto(Mandator mandator)
@@ -145,8 +170,9 @@ public class MandatorService
         List<CompanySummaryDto> companies = mandator.getCompanies().stream()
                 .map(this::toCompanySummaryDto)
                 .toList();
-        return new MandatorDetailDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getCustomer(),
-                mandator.getExternalMandatorId(), mandator.getCountry(), mandator.getLocale(), additionalData, companies);
+        return new MandatorDetailDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
+                mandator.getExternalMandatorId(), mandator.getHostUrl(), mandator.getPort(), mandator.getCountry(), mandator.getLocale(),
+                additionalData, companies);
     }
 
     private CompanySummaryDto toCompanySummaryDto(Company company)

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -59,6 +60,19 @@ public class GlobalExceptionHandler
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of("VALIDATION_FAILED", "Request validation failed", fieldErrors)); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    /**
+     * Malformed JSON or a value of the wrong type (e.g. a non-numeric port) is a client error,
+     * so it must not fall through to the catch-all 500 handler.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex)
+    {
+        log.warn("Malformed request body: {}", ex.getMostSpecificCause().getMessage()); //$NON-NLS-1$
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("MALFORMED_REQUEST", "Request body could not be parsed")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @ExceptionHandler(Exception.class)

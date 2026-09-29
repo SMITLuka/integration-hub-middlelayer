@@ -13,8 +13,10 @@ public class MandatorSummaryDto
     private Long id;
     private String name;
     private String system;
-    private String customer;
+    private String personalIdentificationNumber;
     private String externalMandatorId;
+    private String hostUrl;
+    private Integer port;
     private String country;
     private String locale;
     private int companyCount;

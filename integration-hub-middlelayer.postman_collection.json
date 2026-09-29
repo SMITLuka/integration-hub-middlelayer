@@ -54,7 +54,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Autohaus Rath GmbH\",\n  \"system\": \"DMS\",\n  \"customer\": \"12345\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
+              "raw": "{\n  \"name\": \"Autohaus Rath GmbH\",\n  \"system\": \"DMS\",\n  \"personalIdentificationNumber\": \"12934449907\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"hostUrl\": \"pantheon.sm-it.hr\",\n  \"port\": 1666,\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/mandators", "host": ["{{baseUrl}}"], "path": ["mandators"] }
           },
@@ -138,7 +138,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Autohaus Rath GmbH (Updated)\",\n  \"system\": \"DMS\",\n  \"customer\": \"12345\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
+              "raw": "{\n  \"name\": \"Autohaus Rath GmbH (Updated)\",\n  \"system\": \"DMS\",\n  \"personalIdentificationNumber\": \"12934449907\",\n  \"externalMandatorId\": \"MD_0001\",\n  \"hostUrl\": \"pantheon.sm-it.hr\",\n  \"port\": 1666,\n  \"country\": \"AT\",\n  \"locale\": \"de-AT\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/mandators/{{mandatorId}}", "host": ["{{baseUrl}}"], "path": ["mandators", "{{mandatorId}}"] }
           },

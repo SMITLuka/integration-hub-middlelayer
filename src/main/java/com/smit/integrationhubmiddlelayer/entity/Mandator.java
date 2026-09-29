@@ -51,10 +51,17 @@ public class Mandator
     private String name;
 
     private String system;
-    private String customer;
+
+    @Column(name = "personal_identification_number") //$NON-NLS-1$
+    private String personalIdentificationNumber;
 
     @Column(name = "external_mandator_id", unique = true) //$NON-NLS-1$
     private String externalMandatorId;
+
+    @Column(name = "host_url") //$NON-NLS-1$
+    private String hostUrl;
+
+    private Integer port;
 
     private String country;
     private String locale;
