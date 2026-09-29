@@ -1,5 +1,7 @@
 package com.smit.integrationhubmiddlelayer.controller;
 
+import com.smit.integrationhubmiddlelayer.config.CorsConfig;
+import com.smit.integrationhubmiddlelayer.config.SecurityConfig;
 import com.smit.integrationhubmiddlelayer.dto.AdditionalDataEntryDto;
 import com.smit.integrationhubmiddlelayer.dto.MandatorCreateRequest;
 import com.smit.integrationhubmiddlelayer.dto.MandatorDetailDto;
@@ -17,6 +19,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -39,9 +43,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MandatorController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
+@WithMockUser(roles = "EMPLOYEE") //$NON-NLS-1$
 class MandatorControllerTest
 {
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
     private static final UUID MANDATOR_UUID = UUID.fromString("7b1f3c2e-8d4a-4f6b-9c1e-2a3b4c5d6e7f"); //$NON-NLS-1$
 
     @Autowired

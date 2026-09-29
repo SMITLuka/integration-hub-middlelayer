@@ -1,5 +1,7 @@
 package com.smit.integrationhubmiddlelayer.controller;
 
+import com.smit.integrationhubmiddlelayer.config.CorsConfig;
+import com.smit.integrationhubmiddlelayer.config.SecurityConfig;
 import com.smit.integrationhubmiddlelayer.dto.MappingTemplateDto;
 import com.smit.integrationhubmiddlelayer.dto.MappingTemplateRowDto;
 import com.smit.integrationhubmiddlelayer.dto.MappingTemplateSectionDto;
@@ -12,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,9 +32,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MappingTemplateController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
+@WithMockUser(roles = "EMPLOYEE") //$NON-NLS-1$
 class MappingTemplateControllerTest
 {
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
     @Autowired
     private MockMvc mockMvc;
 

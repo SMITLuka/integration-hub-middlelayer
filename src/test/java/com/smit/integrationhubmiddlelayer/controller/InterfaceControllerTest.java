@@ -1,5 +1,7 @@
 package com.smit.integrationhubmiddlelayer.controller;
 
+import com.smit.integrationhubmiddlelayer.config.CorsConfig;
+import com.smit.integrationhubmiddlelayer.config.SecurityConfig;
 import com.smit.integrationhubmiddlelayer.dto.AdditionalDataEntryDto;
 import com.smit.integrationhubmiddlelayer.dto.InterfaceDetailDto;
 import com.smit.integrationhubmiddlelayer.dto.InterfaceSummaryDto;
@@ -15,6 +17,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -31,9 +35,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InterfaceController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
+@WithMockUser(roles = "EMPLOYEE") //$NON-NLS-1$
 class InterfaceControllerTest
 {
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
     private static final UUID INTERFACE_UUID = UUID.fromString("206a7080-e3b3-4c4f-9d57-5fbb83ca9c92"); //$NON-NLS-1$
 
     @Autowired

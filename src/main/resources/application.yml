@@ -17,6 +17,12 @@ spring:
 integration-hub:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+  auth:
+    # Bitrix MCP server acting as OpenID Connect provider (Bitrix24 login).
+    issuer-uri: ${AUTH_ISSUER_URI:https://mcp.sm-it.hr}
+    # This API's public URL; must equal INTEGRATION_HUB_API_URL on the MCP server. No default on purpose:
+    # a missing value must stop the app from starting instead of silently rejecting every login.
+    audience: ${AUTH_AUDIENCE}
 
 management:
   endpoints:

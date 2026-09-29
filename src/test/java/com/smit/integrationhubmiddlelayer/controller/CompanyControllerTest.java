@@ -1,5 +1,7 @@
 package com.smit.integrationhubmiddlelayer.controller;
 
+import com.smit.integrationhubmiddlelayer.config.CorsConfig;
+import com.smit.integrationhubmiddlelayer.config.SecurityConfig;
 import com.smit.integrationhubmiddlelayer.dto.AdditionalDataSourceLevel;
 import com.smit.integrationhubmiddlelayer.dto.CompanyDetailDto;
 import com.smit.integrationhubmiddlelayer.dto.ResolvedAdditionalDataEntryDto;
@@ -14,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,9 +37,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CompanyController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
+@WithMockUser(roles = "EMPLOYEE") //$NON-NLS-1$
 class CompanyControllerTest
 {
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
     private static final UUID COMPANY_UUID = UUID.fromString("3c9e8f1a-2b4d-4e6f-8a1c-5d7e9f0a1b2c"); //$NON-NLS-1$
 
     @Autowired
