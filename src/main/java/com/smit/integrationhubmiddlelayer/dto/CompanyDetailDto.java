@@ -20,7 +20,6 @@ public class CompanyDetailDto
     private String location;
     private String address;
     private String countryCode;
-    private String customerNumber;
     private String defaultLocale;
     private List<CompanyMappingSummaryDto> mappings;
     private List<CompanyConfigurationSummaryDto> configurations;

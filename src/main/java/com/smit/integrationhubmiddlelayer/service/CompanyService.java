@@ -51,7 +51,6 @@ public class CompanyService
                 .location(request.getLocation())
                 .address(request.getAddress())
                 .countryCode(request.getCountryCode())
-                .customerNumber(request.getCustomerNumber())
                 .defaultLocale(request.getDefaultLocale())
                 .build();
 
@@ -86,7 +85,6 @@ public class CompanyService
         company.setLocation(request.getLocation());
         company.setAddress(request.getAddress());
         company.setCountryCode(request.getCountryCode());
-        company.setCustomerNumber(request.getCustomerNumber());
         company.setDefaultLocale(request.getDefaultLocale());
         log.info("Updated company id={}", companyId); //$NON-NLS-1$
         return toDetailDto(company);
@@ -117,7 +115,7 @@ public class CompanyService
     {
         return new CompanyDetailDto(company.getId(), company.getMandator().getId(), company.getMandator().getName(),
                 company.getName(), company.getDmsCompanyId(), company.getLocation(), company.getAddress(), company.getCountryCode(),
-                company.getCustomerNumber(), company.getDefaultLocale(), companyMappingService.list(company.getId()),
+                company.getDefaultLocale(), companyMappingService.list(company.getId()),
                 companyConfigurationService.list(company.getId()));
     }
 }

@@ -16,6 +16,5 @@ public class CompanyCreateRequest
     private String location;
     private String address;
     private String countryCode;
-    private String customerNumber;
     private String defaultLocale;
 }

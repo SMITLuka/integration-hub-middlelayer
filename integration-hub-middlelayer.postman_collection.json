@@ -251,7 +251,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Wien Zentrale\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"address\": \"Slavonska avenija 11d\",\n  \"countryCode\": \"AT\",\n  \"customerNumber\": \"C-1001\",\n  \"defaultLocale\": \"de-AT\"\n}"
+              "raw": "{\n  \"name\": \"Wien Zentrale\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"address\": \"Slavonska avenija 11d\",\n  \"countryCode\": \"AT\",\n  \"defaultLocale\": \"de-AT\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mandators/{{mandatorId}}/companies",
@@ -309,7 +309,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Wien Zentrale (Updated)\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"address\": \"Slavonska avenija 11d\",\n  \"countryCode\": \"AT\",\n  \"customerNumber\": \"C-1001\",\n  \"defaultLocale\": \"de-AT\"\n}"
+              "raw": "{\n  \"name\": \"Wien Zentrale (Updated)\",\n  \"dmsCompanyId\": \"DMS_0001\",\n  \"location\": \"Wien\",\n  \"address\": \"Slavonska avenija 11d\",\n  \"countryCode\": \"AT\",\n  \"defaultLocale\": \"de-AT\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["companies", "{{companyId}}"] }
           },

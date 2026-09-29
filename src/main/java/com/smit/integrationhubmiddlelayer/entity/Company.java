@@ -61,9 +61,6 @@ public class Company
     @Column(name = "country_code") //$NON-NLS-1$
     private String countryCode;
 
-    @Column(name = "customer_number") //$NON-NLS-1$
-    private String customerNumber;
-
     @Column(name = "default_locale") //$NON-NLS-1$
     private String defaultLocale;
 
