@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Full detail shape for the Company "View Details" screen.
@@ -13,6 +14,7 @@ import java.util.List;
 public class CompanyDetailDto
 {
     private Long id;
+    private UUID uuid;
     private Long mandatorId;
     private String mandatorName;
     private String name;

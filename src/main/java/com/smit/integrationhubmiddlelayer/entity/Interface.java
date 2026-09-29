@@ -23,6 +23,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * An integration definition (e.g. "Volvo Grip Api"). Optionally carries a Mapping Template
@@ -43,17 +44,15 @@ public class Interface
     @EqualsAndHashCode.Include
     private Long id;
 
+    @Builder.Default
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID uuid = UUID.randomUUID();
+
     @Column(nullable = false, unique = true) //$NON-NLS-1$
     private String name;
 
-    @Column(name = "dms_to_middleware_url") //$NON-NLS-1$
-    private String dmsToMiddlewareUrl;
-
-    @Column(name = "oem_to_middleware_url") //$NON-NLS-1$
-    private String oemToMiddlewareUrl;
-
-    @Column(name = "middleware_to_oem_url") //$NON-NLS-1$
-    private String middlewareToOemUrl;
+    @Column(length = 2000)
+    private String description;
 
     @Builder.Default
     @ElementCollection(fetch = FetchType.LAZY)

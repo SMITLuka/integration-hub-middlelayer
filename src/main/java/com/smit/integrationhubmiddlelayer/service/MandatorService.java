@@ -157,7 +157,7 @@ public class MandatorService
 
     private MandatorSummaryDto toSummaryDto(Mandator mandator)
     {
-        return new MandatorSummaryDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
+        return new MandatorSummaryDto(mandator.getId(), mandator.getUuid(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
                 mandator.getExternalMandatorId(), mandator.getHostUrl(), mandator.getPort(), mandator.getCountry(), mandator.getLocale(),
                 mandator.getCompanies().size());
     }
@@ -170,14 +170,14 @@ public class MandatorService
         List<CompanySummaryDto> companies = mandator.getCompanies().stream()
                 .map(this::toCompanySummaryDto)
                 .toList();
-        return new MandatorDetailDto(mandator.getId(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
+        return new MandatorDetailDto(mandator.getId(), mandator.getUuid(), mandator.getName(), mandator.getSystem(), mandator.getPersonalIdentificationNumber(),
                 mandator.getExternalMandatorId(), mandator.getHostUrl(), mandator.getPort(), mandator.getCountry(), mandator.getLocale(),
                 additionalData, companies);
     }
 
     private CompanySummaryDto toCompanySummaryDto(Company company)
     {
-        return new CompanySummaryDto(company.getId(), company.getName(), company.getDmsCompanyId(),
+        return new CompanySummaryDto(company.getId(), company.getUuid(), company.getName(), company.getDmsCompanyId(),
                 company.getLocation(), company.getCountryCode());
     }
 }

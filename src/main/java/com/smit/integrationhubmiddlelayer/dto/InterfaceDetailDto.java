@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Full detail shape for the Interface "View Details" screen.
@@ -13,10 +14,9 @@ import java.util.List;
 public class InterfaceDetailDto
 {
     private Long id;
+    private UUID uuid;
     private String name;
-    private String dmsToMiddlewareUrl;
-    private String oemToMiddlewareUrl;
-    private String middlewareToOemUrl;
+    private String description;
     private List<AdditionalDataEntryDto> additionalData;
     private boolean hasMappingTemplate;
     private boolean hasConfigurationTemplate;

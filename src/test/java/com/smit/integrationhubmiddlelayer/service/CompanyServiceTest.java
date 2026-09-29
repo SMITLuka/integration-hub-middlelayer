@@ -61,6 +61,7 @@ class CompanyServiceTest
         ArgumentCaptor<Company> captor = ArgumentCaptor.forClass(Company.class);
         verify(companyRepository).save(captor.capture());
         assertThat(captor.getValue().getDmsCompanyId()).isNull();
+        assertThat(captor.getValue().getUuid()).isNotNull();
         verify(companyRepository, never()).findByMandatorIdAndDmsCompanyId(anyLong(), anyString());
     }
 

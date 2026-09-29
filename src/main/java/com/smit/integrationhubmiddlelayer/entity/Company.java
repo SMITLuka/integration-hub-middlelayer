@@ -24,6 +24,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * A location/branch under a Mandator. Additional Data here is a sparse override map:
@@ -44,6 +45,10 @@ public class Company
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
+
+    @Builder.Default
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID uuid = UUID.randomUUID();
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "mandator_id", nullable = false) //$NON-NLS-1$

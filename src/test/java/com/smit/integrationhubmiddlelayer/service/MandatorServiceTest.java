@@ -48,6 +48,7 @@ class MandatorServiceTest
         ArgumentCaptor<Mandator> captor = ArgumentCaptor.forClass(Mandator.class);
         verify(mandatorRepository).save(captor.capture());
         assertThat(captor.getValue().getExternalMandatorId()).isNull();
+        assertThat(captor.getValue().getUuid()).isNotNull();
         verify(mandatorRepository, never()).findByExternalMandatorId(anyString());
     }
 
@@ -96,6 +97,13 @@ class MandatorServiceTest
         mandatorService.update(1L, updateRequest("")); //$NON-NLS-1$
 
         assertThat(current.getExternalMandatorId()).isNull();
+    }
+
+    @Test
+    void newMandators_getDistinctUuids()
+    {
+        assertThat(new Mandator().getUuid()).isNotNull();
+        assertThat(Mandator.builder().build().getUuid()).isNotEqualTo(Mandator.builder().build().getUuid());
     }
 
     private static Mandator mandator(Long id, String externalMandatorId)

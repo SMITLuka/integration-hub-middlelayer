@@ -21,6 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(GlobalExceptionHandler.class)
 class MandatorControllerTest
 {
+    private static final UUID MANDATOR_UUID = UUID.fromString("7b1f3c2e-8d4a-4f6b-9c1e-2a3b4c5d6e7f"); //$NON-NLS-1$
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -49,14 +52,14 @@ class MandatorControllerTest
 
     private static MandatorDetailDto detail(Long id)
     {
-        return new MandatorDetailDto(id, "Autohaus Rath GmbH", "MD.DMS", "12934449907", "MD_10386", "pantheon.sm-it.hr", 1666, "AT", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$
+        return new MandatorDetailDto(id, MANDATOR_UUID, "Autohaus Rath GmbH", "MD.DMS", "12934449907", "MD_10386", "pantheon.sm-it.hr", 1666, "AT", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$
                 List.of(new AdditionalDataEntryDto("DMS_DB_USER", "ALEXANDER")), List.of()); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Test
     void list_returns200WithPage() throws Exception
     {
-        MandatorSummaryDto summary = new MandatorSummaryDto(1L, "Autohaus Rath GmbH", "MD.DMS", "12934449907", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        MandatorSummaryDto summary = new MandatorSummaryDto(1L, MANDATOR_UUID, "Autohaus Rath GmbH", "MD.DMS", "12934449907", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
                 "MD_10386", "pantheon.sm-it.hr", 1666, "AT", "de_AT", 1); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         when(mandatorService.list(isNull(), any())).thenReturn(new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1));
 
@@ -147,6 +150,7 @@ class MandatorControllerTest
                 .andExpect(jsonPath("$.personalIdentificationNumber").value("12934449907")) //$NON-NLS-1$ //$NON-NLS-2$
                 .andExpect(jsonPath("$.hostUrl").value("pantheon.sm-it.hr")) //$NON-NLS-1$ //$NON-NLS-2$
                 .andExpect(jsonPath("$.port").value(1666)) //$NON-NLS-1$
+                .andExpect(jsonPath("$.uuid").value(MANDATOR_UUID.toString())) //$NON-NLS-1$
                 .andExpect(jsonPath("$.customer").doesNotExist()); //$NON-NLS-1$
     }
 

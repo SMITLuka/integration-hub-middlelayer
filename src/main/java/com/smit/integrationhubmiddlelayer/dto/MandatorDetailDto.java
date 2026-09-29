@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Full detail shape for the Mandator "View Details" screen.
@@ -13,6 +14,7 @@ import java.util.List;
 public class MandatorDetailDto
 {
     private Long id;
+    private UUID uuid;
     private String name;
     private String system;
     private String personalIdentificationNumber;

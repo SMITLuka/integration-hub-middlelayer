@@ -418,7 +418,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Volvo Grip Api\",\n  \"dmsToMiddlewareUrl\": \"https://dms.example.com/outbound\",\n  \"oemToMiddlewareUrl\": \"https://oem.example.com/inbound\",\n  \"middlewareToOemUrl\": \"https://oem.example.com/api\"\n}"
+              "raw": "{\n  \"name\": \"Volvo Grip Api\",\n  \"description\": \"Sends Volvo GRIP customer data to the OEM\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/interfaces", "host": ["{{baseUrl}}"], "path": ["interfaces"] }
           },
@@ -499,7 +499,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Volvo Grip Api (Updated)\",\n  \"dmsToMiddlewareUrl\": \"https://dms.example.com/outbound\",\n  \"oemToMiddlewareUrl\": \"https://oem.example.com/inbound\",\n  \"middlewareToOemUrl\": \"https://oem.example.com/api\"\n}"
+              "raw": "{\n  \"name\": \"Volvo Grip Api (Updated)\",\n  \"description\": \"Sends Volvo GRIP customer data to the OEM\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/interfaces/{{interfaceId}}", "host": ["{{baseUrl}}"], "path": ["interfaces", "{{interfaceId}}"] }
           },

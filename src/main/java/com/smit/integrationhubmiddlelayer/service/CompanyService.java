@@ -113,7 +113,7 @@ public class CompanyService
 
     private CompanyDetailDto toDetailDto(Company company)
     {
-        return new CompanyDetailDto(company.getId(), company.getMandator().getId(), company.getMandator().getName(),
+        return new CompanyDetailDto(company.getId(), company.getUuid(), company.getMandator().getId(), company.getMandator().getName(),
                 company.getName(), company.getDmsCompanyId(), company.getLocation(), company.getAddress(), company.getCountryCode(),
                 company.getDefaultLocale(), companyMappingService.list(company.getId()),
                 companyConfigurationService.list(company.getId()));

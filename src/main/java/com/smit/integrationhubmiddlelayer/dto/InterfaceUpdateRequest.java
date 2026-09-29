@@ -1,6 +1,7 @@
 package com.smit.integrationhubmiddlelayer.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -12,7 +13,6 @@ public class InterfaceUpdateRequest
     @NotBlank
     private String name;
 
-    private String dmsToMiddlewareUrl;
-    private String oemToMiddlewareUrl;
-    private String middlewareToOemUrl;
+    @Size(max = 2000)
+    private String description;
 }

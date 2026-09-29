@@ -71,9 +71,7 @@ public class InterfaceService
 
         Interface interfaceEntity = Interface.builder()
                 .name(request.getName())
-                .dmsToMiddlewareUrl(request.getDmsToMiddlewareUrl())
-                .oemToMiddlewareUrl(request.getOemToMiddlewareUrl())
-                .middlewareToOemUrl(request.getMiddlewareToOemUrl())
+                .description(request.getDescription())
                 .build();
 
         Interface saved = interfaceRepository.save(interfaceEntity);
@@ -91,9 +89,7 @@ public class InterfaceService
     {
         Interface interfaceEntity = findOrThrow(interfaceId);
         interfaceEntity.setName(request.getName());
-        interfaceEntity.setDmsToMiddlewareUrl(request.getDmsToMiddlewareUrl());
-        interfaceEntity.setOemToMiddlewareUrl(request.getOemToMiddlewareUrl());
-        interfaceEntity.setMiddlewareToOemUrl(request.getMiddlewareToOemUrl());
+        interfaceEntity.setDescription(request.getDescription());
         log.info("Updated interface id={}", interfaceId); //$NON-NLS-1$
         return toDetailDto(interfaceEntity);
     }
@@ -143,7 +139,7 @@ public class InterfaceService
 
     private InterfaceSummaryDto toSummaryDto(Interface interfaceEntity)
     {
-        return new InterfaceSummaryDto(interfaceEntity.getId(), interfaceEntity.getName(),
+        return new InterfaceSummaryDto(interfaceEntity.getId(), interfaceEntity.getUuid(), interfaceEntity.getName(),
                 mappingTemplateRepository.findByInterfaceEntityId(interfaceEntity.getId()).isPresent(),
                 configurationTemplateRepository.findByInterfaceEntityId(interfaceEntity.getId()).isPresent());
     }
@@ -153,8 +149,8 @@ public class InterfaceService
         List<AdditionalDataEntryDto> additionalData = interfaceEntity.getAdditionalData().entrySet().stream()
                 .map(entry -> new AdditionalDataEntryDto(entry.getKey(), entry.getValue()))
                 .toList();
-        return new InterfaceDetailDto(interfaceEntity.getId(), interfaceEntity.getName(), interfaceEntity.getDmsToMiddlewareUrl(),
-                interfaceEntity.getOemToMiddlewareUrl(), interfaceEntity.getMiddlewareToOemUrl(), additionalData,
+        return new InterfaceDetailDto(interfaceEntity.getId(), interfaceEntity.getUuid(), interfaceEntity.getName(),
+                interfaceEntity.getDescription(), additionalData,
                 mappingTemplateRepository.findByInterfaceEntityId(interfaceEntity.getId()).isPresent(),
                 configurationTemplateRepository.findByInterfaceEntityId(interfaceEntity.getId()).isPresent(),
                 interfaceUsageService.getUsages(interfaceEntity.getId()));

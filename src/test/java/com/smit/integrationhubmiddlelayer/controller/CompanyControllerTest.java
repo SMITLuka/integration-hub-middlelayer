@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -35,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(GlobalExceptionHandler.class)
 class CompanyControllerTest
 {
+    private static final UUID COMPANY_UUID = UUID.fromString("3c9e8f1a-2b4d-4e6f-8a1c-5d7e9f0a1b2c"); //$NON-NLS-1$
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -46,7 +49,7 @@ class CompanyControllerTest
 
     private static CompanyDetailDto detail(Long id)
     {
-        return new CompanyDetailDto(id, 1L, "Autohaus Rath GmbH", "Taferner - 10472", "1", "Vienna", "Slavonska avenija 11d", "AT", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$
+        return new CompanyDetailDto(id, COMPANY_UUID, 1L, "Autohaus Rath GmbH", "Taferner - 10472", "1", "Vienna", "Slavonska avenija 11d", "AT", "de_AT", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$
                 List.of(), List.of());
     }
 
@@ -61,6 +64,7 @@ class CompanyControllerTest
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Taferner - 10472")) //$NON-NLS-1$ //$NON-NLS-2$
                 .andExpect(jsonPath("$.address").value("Slavonska avenija 11d")) //$NON-NLS-1$ //$NON-NLS-2$
+                .andExpect(jsonPath("$.uuid").value(COMPANY_UUID.toString())) //$NON-NLS-1$
                 .andExpect(jsonPath("$.customerNumber").doesNotExist()); //$NON-NLS-1$
     }
 

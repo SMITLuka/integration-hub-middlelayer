@@ -19,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -33,6 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(GlobalExceptionHandler.class)
 class InterfaceControllerTest
 {
+    private static final UUID INTERFACE_UUID = UUID.fromString("206a7080-e3b3-4c4f-9d57-5fbb83ca9c92"); //$NON-NLS-1$
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -41,7 +44,7 @@ class InterfaceControllerTest
 
     private static InterfaceDetailDto detail(Long id)
     {
-        return new InterfaceDetailDto(id, "Volvo Grip Api", "https://dms", "https://oem", "https://mid", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        return new InterfaceDetailDto(id, INTERFACE_UUID, "Volvo Grip Api", "Sends Volvo GRIP customer data to the OEM", //$NON-NLS-1$ //$NON-NLS-2$
                 List.of(new AdditionalDataEntryDto("Market", "AT")), true, true, //$NON-NLS-1$ //$NON-NLS-2$
                 new InterfaceUsagesDto(List.of(), List.of()));
     }
@@ -49,7 +52,7 @@ class InterfaceControllerTest
     @Test
     void list_returns200WithPage() throws Exception
     {
-        InterfaceSummaryDto summary = new InterfaceSummaryDto(1L, "Volvo Grip Api", true, true); //$NON-NLS-1$
+        InterfaceSummaryDto summary = new InterfaceSummaryDto(1L, INTERFACE_UUID, "Volvo Grip Api", true, true); //$NON-NLS-1$
         when(interfaceService.list(isNull(), any())).thenReturn(new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/interfaces")) //$NON-NLS-1$
@@ -67,6 +70,16 @@ class InterfaceControllerTest
                         .content("{\"name\":\"Volvo Grip Api\"}")) //$NON-NLS-1$
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Volvo Grip Api")); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    @Test
+    void create_returns400_whenDescriptionTooLong() throws Exception
+    {
+        mockMvc.perform(post("/interfaces") //$NON-NLS-1$
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Volvo Grip Api\",\"description\":\"" + "x".repeat(2001) + "\"}")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Test
@@ -98,7 +111,10 @@ class InterfaceControllerTest
 
         mockMvc.perform(get("/interfaces/1")) //$NON-NLS-1$
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.hasMappingTemplate").value(true)); //$NON-NLS-1$
+                .andExpect(jsonPath("$.hasMappingTemplate").value(true)) //$NON-NLS-1$
+                .andExpect(jsonPath("$.uuid").value(INTERFACE_UUID.toString())) //$NON-NLS-1$
+                .andExpect(jsonPath("$.description").value("Sends Volvo GRIP customer data to the OEM")) //$NON-NLS-1$ //$NON-NLS-2$
+                .andExpect(jsonPath("$.dmsToMiddlewareUrl").doesNotExist()); //$NON-NLS-1$
     }
 
     @Test
