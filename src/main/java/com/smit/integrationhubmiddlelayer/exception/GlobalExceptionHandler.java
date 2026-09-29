@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -73,6 +74,19 @@ public class GlobalExceptionHandler
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of("MALFORMED_REQUEST", "Request body could not be parsed")); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    /**
+     * Unknown paths are a 404, not a server error. Logged at debug only: the public endpoint
+     * is constantly probed by scanners (/.env, /.git/config, ...) which would flood the logs.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex)
+    {
+        log.debug("No resource found: {}", ex.getResourcePath()); //$NON-NLS-1$
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("NOT_FOUND", "Resource not found")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @ExceptionHandler(Exception.class)

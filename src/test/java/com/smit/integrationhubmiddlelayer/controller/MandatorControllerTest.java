@@ -151,6 +151,14 @@ class MandatorControllerTest
     }
 
     @Test
+    void unknownPath_returns404_notServerError() throws Exception
+    {
+        mockMvc.perform(get("/.git/config")) //$NON-NLS-1$
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND")); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    @Test
     void getDetail_returns404_whenNotFound() throws Exception
     {
         when(mandatorService.getDetail(99L)).thenThrow(new MandatorNotFoundException(99L));
