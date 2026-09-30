@@ -71,7 +71,7 @@ class JwtDecoderTest
 
         assertThat(jwt.getSubject()).isEqualTo("42"); //$NON-NLS-1$
         assertThat(jwt.getClaimAsString("bitrix_user_type")).isEqualTo("employee"); //$NON-NLS-1$ //$NON-NLS-2$
-        assertThat(SecurityConfig.isIntranetEmployee(jwt)).isTrue();
+        assertThat(PermissionPolicy.isIntranetEmployee(jwt)).isTrue();
     }
 
     @Test

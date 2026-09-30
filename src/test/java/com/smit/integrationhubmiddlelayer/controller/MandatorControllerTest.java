@@ -1,7 +1,9 @@
 package com.smit.integrationhubmiddlelayer.controller;
 
 import com.smit.integrationhubmiddlelayer.config.CorsConfig;
+import com.smit.integrationhubmiddlelayer.config.PermissionPolicy;
 import com.smit.integrationhubmiddlelayer.config.SecurityConfig;
+import com.smit.integrationhubmiddlelayer.config.WithFullAccess;
 import com.smit.integrationhubmiddlelayer.dto.AdditionalDataEntryDto;
 import com.smit.integrationhubmiddlelayer.dto.MandatorCreateRequest;
 import com.smit.integrationhubmiddlelayer.dto.MandatorDetailDto;
@@ -20,7 +22,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -43,8 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MandatorController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
-@WithMockUser(roles = "EMPLOYEE") //$NON-NLS-1$
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class, PermissionPolicy.class})
+@WithFullAccess
 class MandatorControllerTest
 {
     @MockitoBean
@@ -163,9 +164,16 @@ class MandatorControllerTest
     }
 
     @Test
-    void unknownPath_returns404_notServerError() throws Exception
+    void unmappedPath_isDeniedBySecurity() throws Exception
     {
         mockMvc.perform(get("/.git/config")) //$NON-NLS-1$
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void permittedButMissingPath_returns404_notServerError() throws Exception
+    {
+        mockMvc.perform(get("/mandators/1/does-not-exist")) //$NON-NLS-1$
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("NOT_FOUND")); //$NON-NLS-1$ //$NON-NLS-2$
     }

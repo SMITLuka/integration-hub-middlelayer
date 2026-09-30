@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * endpoint: a Bitrix login is required, and only intranet employees are let in.
  */
 @WebMvcTest(MandatorController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class})
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class, PermissionPolicy.class})
 class SecurityConfigTest
 {
     private static final String ISSUER = "https://mcp.sm-it.hr"; //$NON-NLS-1$

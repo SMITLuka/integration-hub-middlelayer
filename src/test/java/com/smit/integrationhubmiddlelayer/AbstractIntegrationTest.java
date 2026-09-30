@@ -57,8 +57,8 @@ public abstract class AbstractIntegrationTest
 
     /**
      * The API requires a Bitrix login (see SecurityConfig). Tests run the real security filter chain
-     * and authenticate as an intranet employee: every request carries a test token that the mocked
-     * decoder turns into a valid employee JWT.
+     * and authenticate as an intranet employee in an admin workgroup (all rights): every request
+     * carries a test token that the mocked decoder turns into a valid employee JWT.
      */
     @BeforeEach
     void authenticateAsIntranetEmployee()
@@ -68,6 +68,7 @@ public abstract class AbstractIntegrationTest
                 .header("alg", "RS256") //$NON-NLS-1$ //$NON-NLS-2$
                 .subject("1") //$NON-NLS-1$
                 .claim("bitrix_user_type", "employee") //$NON-NLS-1$ //$NON-NLS-2$
+                .claim("bitrix_workgroups", List.of("45")) //$NON-NLS-1$ //$NON-NLS-2$
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(3600))
                 .build());
@@ -91,5 +92,7 @@ public abstract class AbstractIntegrationTest
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl); //$NON-NLS-1$
         registry.add("spring.datasource.username", POSTGRES::getUsername); //$NON-NLS-1$
         registry.add("spring.datasource.password", POSTGRES::getPassword); //$NON-NLS-1$
+        // The test user (see authenticateAsIntranetEmployee) is a member of this admin workgroup.
+        registry.add("integration-hub.auth.admin-workgroups", () -> "45"); //$NON-NLS-1$ //$NON-NLS-2$
     }
 }

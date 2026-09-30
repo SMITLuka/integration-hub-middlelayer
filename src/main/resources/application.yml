@@ -23,6 +23,11 @@ integration-hub:
     # This API's public URL; must equal INTEGRATION_HUB_API_URL on the MCP server. No default on purpose:
     # a missing value must stop the app from starting instead of silently rejecting every login.
     audience: ${AUTH_AUDIENCE}
+    # Bitrix workgroup IDs whose members may read, write and delete on all levels; everyone else gets
+    # read on Mandators/Companies and Interfaces/Templates, read+write on Configurations/Mappings.
+    # Must be CLOSED (invite-only) groups: membership grants admin rights, so a group anyone can join
+    # would let anyone make themselves admin. Empty by default = nobody is admin.
+    admin-workgroups: ${ADMIN_BITRIX_WORKGROUPS:}
 
 management:
   endpoints:

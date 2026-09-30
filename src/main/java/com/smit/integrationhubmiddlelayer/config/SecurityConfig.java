@@ -5,11 +5,11 @@ import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -29,19 +29,26 @@ import java.util.Objects;
 
 /**
  * Every API call requires a Bitrix24 login: the frontend logs users in through the Bitrix MCP server
- * (an OpenID Connect provider), which issues JWT access tokens for this API. Only intranet employees
- * are allowed in; Bitrix extranet users get 403.
+ * (an OpenID Connect provider), which issues JWT access tokens for this API. What a user may do is
+ * decided per level and right (see PermissionPolicy); every endpoint is mapped below, anything
+ * not mapped is denied, so a new endpoint cannot become accessible by accident.
  */
 @Configuration
 public class SecurityConfig
 {
     static final String EMPLOYEE_ROLE = "EMPLOYEE"; //$NON-NLS-1$
 
-    private static final String BITRIX_USER_TYPE_CLAIM = "bitrix_user_type"; //$NON-NLS-1$
-    private static final String BITRIX_DEPARTMENTS_CLAIM = "bitrix_departments"; //$NON-NLS-1$
+    /** Level 3 lives under a Company's URL, so it must be matched before the Level 1 "/companies/**" rules. */
+    private static final String[] CONFIGURATIONS_MAPPINGS_PATHS = { "/companies/*/configurations", "/companies/*/configurations/**", //$NON-NLS-1$ //$NON-NLS-2$
+            "/companies/*/mappings", "/companies/*/mappings/**" }; //$NON-NLS-1$ //$NON-NLS-2$
+    /** Resetting a single configuration entry or mapping row to its inherited value edits the configuration: WRITE, not DELETE. */
+    private static final String[] CONFIGURATIONS_MAPPINGS_RESET_PATHS = { "/companies/*/configurations/*/entries/*", //$NON-NLS-1$
+            "/companies/*/mappings/*/rows/*" }; //$NON-NLS-1$
+    private static final String[] INTERFACES_TEMPLATES_PATHS = { "/interfaces", "/interfaces/**" }; //$NON-NLS-1$ //$NON-NLS-2$
+    private static final String[] MANDATORS_COMPANIES_PATHS = { "/mandators", "/mandators/**", "/companies/**" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, PermissionPolicy permissionPolicy) throws Exception
     {
         http
                 .cors(Customizer.withDefaults())
@@ -49,10 +56,30 @@ public class SecurityConfig
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll() //$NON-NLS-1$ //$NON-NLS-2$
-                        .anyRequest().hasRole(EMPLOYEE_ROLE))
+                        .requestMatchers(HttpMethod.GET, "/me", "/dashboard/**").hasRole(EMPLOYEE_ROLE) //$NON-NLS-1$ //$NON-NLS-2$
+
+                        .requestMatchers(HttpMethod.DELETE, CONFIGURATIONS_MAPPINGS_RESET_PATHS).hasAuthority(authority(AccessLevel.CONFIGURATIONS_MAPPINGS, AccessRight.WRITE))
+                        .requestMatchers(HttpMethod.GET, CONFIGURATIONS_MAPPINGS_PATHS).hasAuthority(authority(AccessLevel.CONFIGURATIONS_MAPPINGS, AccessRight.READ))
+                        .requestMatchers(HttpMethod.DELETE, CONFIGURATIONS_MAPPINGS_PATHS).hasAuthority(authority(AccessLevel.CONFIGURATIONS_MAPPINGS, AccessRight.DELETE))
+                        .requestMatchers(CONFIGURATIONS_MAPPINGS_PATHS).hasAuthority(authority(AccessLevel.CONFIGURATIONS_MAPPINGS, AccessRight.WRITE))
+
+                        .requestMatchers(HttpMethod.GET, INTERFACES_TEMPLATES_PATHS).hasAuthority(authority(AccessLevel.INTERFACES_TEMPLATES, AccessRight.READ))
+                        .requestMatchers(HttpMethod.DELETE, INTERFACES_TEMPLATES_PATHS).hasAuthority(authority(AccessLevel.INTERFACES_TEMPLATES, AccessRight.DELETE))
+                        .requestMatchers(INTERFACES_TEMPLATES_PATHS).hasAuthority(authority(AccessLevel.INTERFACES_TEMPLATES, AccessRight.WRITE))
+
+                        .requestMatchers(HttpMethod.GET, MANDATORS_COMPANIES_PATHS).hasAuthority(authority(AccessLevel.MANDATORS_COMPANIES, AccessRight.READ))
+                        .requestMatchers(HttpMethod.DELETE, MANDATORS_COMPANIES_PATHS).hasAuthority(authority(AccessLevel.MANDATORS_COMPANIES, AccessRight.DELETE))
+                        .requestMatchers(MANDATORS_COMPANIES_PATHS).hasAuthority(authority(AccessLevel.MANDATORS_COMPANIES, AccessRight.WRITE))
+
+                        .anyRequest().denyAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(employeeAuthenticationConverter())));
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(authenticationConverter(permissionPolicy))));
         return http.build();
+    }
+
+    private static String authority(AccessLevel level, AccessRight right)
+    {
+        return level.authority(right);
     }
 
     /**
@@ -89,27 +116,10 @@ public class SecurityConfig
                 audienceValidator, expiryRequired, clientValidator);
     }
 
-    static JwtAuthenticationConverter employeeAuthenticationConverter()
+    static JwtAuthenticationConverter authenticationConverter(PermissionPolicy permissionPolicy)
     {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> isIntranetEmployee(jwt)
-                ? List.of(new SimpleGrantedAuthority("ROLE_" + EMPLOYEE_ROLE)) //$NON-NLS-1$
-                : List.of());
+        converter.setJwtGrantedAuthoritiesConverter(permissionPolicy::authorities);
         return converter;
-    }
-
-    /**
-     * Bitrix marks internal users as USER_TYPE "employee". Older Bitrix versions do not send USER_TYPE;
-     * there, intranet users are the ones assigned to at least one department (extranet users never are).
-     */
-    static boolean isIntranetEmployee(Jwt jwt)
-    {
-        String userType = jwt.getClaimAsString(BITRIX_USER_TYPE_CLAIM);
-        if (userType != null)
-        {
-            return "employee".equals(userType); //$NON-NLS-1$
-        }
-        List<String> departments = jwt.getClaimAsStringList(BITRIX_DEPARTMENTS_CLAIM);
-        return departments != null && !departments.isEmpty();
     }
 }
