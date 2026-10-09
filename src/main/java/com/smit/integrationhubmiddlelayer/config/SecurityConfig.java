@@ -1,7 +1,5 @@
 package com.smit.integrationhubmiddlelayer.config;
 
-import com.nimbusds.jose.JOSEObjectType;
-import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +13,6 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -23,20 +20,19 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.util.Assert;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Every API call requires a Bitrix24 login: the frontend logs users in through the Bitrix MCP server
- * (an OpenID Connect provider), which issues JWT access tokens for this API. What a user may do is
- * decided per level and right (see PermissionPolicy); every endpoint is mapped below, anything
- * not mapped is denied, so a new endpoint cannot become accessible by accident.
+ * Every API call requires an SMIT SSO login: users open Integration Hub from the SSO portal, which
+ * hands the frontend a signed JWT issued for this app. What a user may do is decided per level and
+ * right from the SSO permissions in that token (see PermissionPolicy); every endpoint is mapped
+ * below, anything not mapped is denied, so a new endpoint cannot become accessible by accident.
  */
 @Configuration
 public class SecurityConfig
 {
     static final String EMPLOYEE_ROLE = "EMPLOYEE"; //$NON-NLS-1$
+    static final String APP_ID_CLAIM = "app_id"; //$NON-NLS-1$
 
     /** Level 3 lives under a Company's URL, so it must be matched before the Level 1 "/companies/**" rules. */
     private static final String[] CONFIGURATIONS_MAPPINGS_PATHS = { "/companies/*/configurations", "/companies/*/configurations/**", //$NON-NLS-1$ //$NON-NLS-2$
@@ -83,37 +79,33 @@ public class SecurityConfig
     }
 
     /**
-     * Verifies tokens offline against the provider's published keys, so there is no network call at
-     * startup. Only JWT access tokens (typ "at+jwt", RFC 9068) are accepted: the same provider also
-     * signs ID tokens with the same key, and those must never pass as API tokens. The audience and
-     * client checks bind tokens to this API and to the Integration Hub frontend; tokens the provider
-     * issues for other resources (e.g. the MCP server itself) are rejected.
+     * Verifies tokens offline against the SSO gateway's published keys, so there is no network call at
+     * startup. SSO tokens carry neither "iss" nor "aud"; the binding to this API is the "app_id" claim,
+     * which the gateway sets to the registered app the token was issued for. Tokens for other SSO apps
+     * and portal-only tokens (no app_id) are rejected, otherwise any SSO app's token would open this API.
+     * Revocation is deliberately not checked (the gateway's /verify is rate-limited to 60 calls a minute):
+     * a deactivated SSO user or a removed role keeps working until the token expires, at most one hour.
      */
     @Bean
-    public JwtDecoder jwtDecoder(@Value("${integration-hub.auth.issuer-uri}") String issuerUri,
-            @Value("${integration-hub.auth.audience}") String audience,
-            @Value("${integration-hub.auth.client-id:integration-hub}") String clientId) //$NON-NLS-1$
+    public JwtDecoder jwtDecoder(@Value("${integration-hub.auth.jwks-uri}") String jwksUri, //$NON-NLS-1$
+            @Value("${integration-hub.auth.app-id}") String appId) //$NON-NLS-1$
     {
-        // An empty AUTH_AUDIENCE would otherwise start fine and reject every login with 401.
-        Assert.hasText(audience, "integration-hub.auth.audience (AUTH_AUDIENCE) must be set to this API's public URL"); //$NON-NLS-1$
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(issuerUri + "/jwks") //$NON-NLS-1$
-                .jwtProcessorCustomizer(processor -> processor.setJWSTypeVerifier(
-                        new DefaultJOSEObjectTypeVerifier<>(new JOSEObjectType("at+jwt")))) //$NON-NLS-1$
-                .build();
-
-        decoder.setJwtValidator(tokenValidator(issuerUri, audience, clientId));
+        // An empty SSO_APP_ID would otherwise start fine and reject every login with 401.
+        Assert.hasText(jwksUri, "integration-hub.auth.jwks-uri (SSO_JWKS_URI) must be set"); //$NON-NLS-1$
+        Assert.hasText(appId, "integration-hub.auth.app-id (SSO_APP_ID) must be set to this app's ID in the SSO gateway"); //$NON-NLS-1$
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwksUri).build();
+        decoder.setJwtValidator(tokenValidator(appId));
         return decoder;
     }
 
-    static OAuth2TokenValidator<Jwt> tokenValidator(String issuerUri, String audience, String clientId)
+    static OAuth2TokenValidator<Jwt> tokenValidator(String appId)
     {
-        OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<Collection<String>>("aud", //$NON-NLS-1$
-                aud -> aud != null && aud.contains(audience));
+        // A missing claim reaches the predicate as null, so tokens without app_id fail too; Object, so a
+        // non-string app_id is a validation error (401) rather than a ClassCastException (500).
+        OAuth2TokenValidator<Jwt> appValidator = new JwtClaimValidator<Object>(APP_ID_CLAIM, appId::equals);
         // JwtTimestampValidator accepts tokens without exp; an access token must always expire.
         OAuth2TokenValidator<Jwt> expiryRequired = new JwtClaimValidator<Instant>("exp", Objects::nonNull); //$NON-NLS-1$
-        OAuth2TokenValidator<Jwt> clientValidator = new JwtClaimValidator<String>("client_id", clientId::equals); //$NON-NLS-1$
-        return new DelegatingOAuth2TokenValidator<>(new JwtTimestampValidator(), new JwtIssuerValidator(issuerUri),
-                audienceValidator, expiryRequired, clientValidator);
+        return new DelegatingOAuth2TokenValidator<>(new JwtTimestampValidator(), expiryRequired, appValidator);
     }
 
     static JwtAuthenticationConverter authenticationConverter(PermissionPolicy permissionPolicy)

@@ -5,29 +5,24 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Which authorities a token yields: none for non-employees, the base set for employees and every
- * right for members of an admin workgroup.
+ * Which authorities an SSO token yields: none without an Integration Hub flag, the base set for
+ * is_app_user and every right for is_app_admin. The roles' companies play no part.
  */
 class PermissionPolicyTest
 {
-    private final PermissionPolicy policy = new PermissionPolicy(" 45, 42 "); //$NON-NLS-1$
+    private final PermissionPolicy policy = new PermissionPolicy();
 
     @Test
-    void extranetUser_getsNothing_evenInAnAdminWorkgroup()
+    void appUser_readsLevelsOneAndTwo_readsAndWritesLevelThree()
     {
-        assertThat(authorities(Map.of("bitrix_user_type", "extranet", "bitrix_workgroups", List.of("45")))).isEmpty(); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-    }
-
-    @Test
-    void employee_readsLevelsOneAndTwo_readsAndWritesLevelThree()
-    {
-        assertThat(authorities(Map.of("bitrix_user_type", "employee"))).containsExactlyInAnyOrder( //$NON-NLS-1$ //$NON-NLS-2$
+        assertThat(authorities(flags(Map.of("is_app_user", true)))).containsExactlyInAnyOrder( //$NON-NLS-1$
                 "ROLE_EMPLOYEE", //$NON-NLS-1$
                 "MANDATORS_COMPANIES_READ", //$NON-NLS-1$
                 "INTERFACES_TEMPLATES_READ", //$NON-NLS-1$
@@ -35,16 +30,9 @@ class PermissionPolicyTest
     }
 
     @Test
-    void employeeInOtherWorkgroups_keepsBaseRights()
+    void appAdmin_getsEveryRightOnEveryLevel_withoutAlsoBeingAppUser()
     {
-        assertThat(authorities(Map.of("bitrix_user_type", "employee", "bitrix_workgroups", List.of("7", "176")))) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-                .doesNotContain("MANDATORS_COMPANIES_WRITE", "CONFIGURATIONS_MAPPINGS_DELETE"); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
-    @Test
-    void adminWorkgroupMember_getsEveryRightOnEveryLevel()
-    {
-        List<String> authorities = authorities(Map.of("bitrix_user_type", "employee", "bitrix_workgroups", List.of("42"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        List<String> authorities = authorities(flags(Map.of("is_app_admin", true))); //$NON-NLS-1$
 
         assertThat(authorities).hasSize(1 + AccessLevel.values().length * AccessRight.values().length);
         for (AccessLevel level : AccessLevel.values())
@@ -57,24 +45,44 @@ class PermissionPolicyTest
     }
 
     @Test
-    void withoutConfiguredAdminWorkgroups_nobodyIsAdmin()
+    void companiesWithoutFlag_grantNothing()
     {
-        PermissionPolicy unconfigured = new PermissionPolicy(""); //$NON-NLS-1$
-        Instant now = Instant.now();
-        Jwt jwt = Jwt.withTokenValue("token").header("alg", "RS256").subject("7") //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-                .issuedAt(now).expiresAt(now.plusSeconds(60))
-                .claim("bitrix_user_type", "employee").claim("bitrix_workgroups", List.of("45", "42")).build(); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        Map<String, Object> claims = Map.of("permissions", Map.of("feature_flags", Map.of(), //$NON-NLS-1$ //$NON-NLS-2$
+                "data_scope", Map.of("companies", List.of("SMIT")))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
-        assertThat(unconfigured.authorities(jwt).stream().map(GrantedAuthority::getAuthority))
-                .contains("CONFIGURATIONS_MAPPINGS_WRITE") //$NON-NLS-1$
+        assertThat(authorities(claims)).isEmpty();
+    }
+
+    @Test
+    void tokenWithoutUsablePermissions_getsNothing()
+    {
+        assertThat(authorities(Map.of())).isEmpty();
+        assertThat(authorities(Map.of("permissions", Map.of()))).isEmpty(); //$NON-NLS-1$
+        assertThat(authorities(Map.of("permissions", "not-an-object"))).isEmpty(); //$NON-NLS-1$ //$NON-NLS-2$
+        assertThat(authorities(Map.of("permissions", Map.of("feature_flags", "is_app_user")))).isEmpty(); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
+
+    @Test
+    void flagsMustBeBooleanTrue()
+    {
+        assertThat(authorities(flags(Map.of("is_app_user", "true")))).isEmpty(); //$NON-NLS-1$ //$NON-NLS-2$
+        assertThat(authorities(flags(Map.of("is_app_user", false)))).isEmpty(); //$NON-NLS-1$
+        assertThat(authorities(flags(Map.of("is_app_user", true, "is_app_admin", "true")))) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
                 .noneMatch(authority -> authority.endsWith("_DELETE")); //$NON-NLS-1$
     }
 
     @Test
-    void workgroupIdsMayArriveAsNumbers()
+    void ssoPortalAdmin_isNeitherAppUserNorAppAdmin()
     {
-        assertThat(authorities(Map.of("bitrix_user_type", "employee", "bitrix_workgroups", List.of(45)))) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                .contains("MANDATORS_COMPANIES_DELETE"); //$NON-NLS-1$
+        Map<String, Object> claims = new HashMap<>(flags(Map.of()));
+        claims.put("is_admin", true); //$NON-NLS-1$
+
+        assertThat(authorities(claims)).isEmpty();
+    }
+
+    private static Map<String, Object> flags(Map<String, Object> featureFlags)
+    {
+        return Map.of("permissions", Map.of("feature_flags", featureFlags, "data_scope", Map.of())); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     private List<String> authorities(Map<String, Object> claims)

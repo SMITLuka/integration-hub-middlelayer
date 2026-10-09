@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Mockito.when;
 
@@ -56,19 +57,19 @@ public abstract class AbstractIntegrationTest
     private JwtDecoder jwtDecoder;
 
     /**
-     * The API requires a Bitrix login (see SecurityConfig). Tests run the real security filter chain
-     * and authenticate as an intranet employee in an admin workgroup (all rights): every request
-     * carries a test token that the mocked decoder turns into a valid employee JWT.
+     * The API requires an SSO login (see SecurityConfig). Tests run the real security filter chain
+     * and authenticate as an Integration Hub app admin (all rights): every request carries a test
+     * token that the mocked decoder turns into a valid SSO JWT.
      */
     @BeforeEach
-    void authenticateAsIntranetEmployee()
+    void authenticateAsAppAdmin()
     {
         Instant now = Instant.now();
         when(jwtDecoder.decode(TEST_TOKEN)).thenReturn(Jwt.withTokenValue(TEST_TOKEN)
                 .header("alg", "RS256") //$NON-NLS-1$ //$NON-NLS-2$
                 .subject("1") //$NON-NLS-1$
-                .claim("bitrix_user_type", "employee") //$NON-NLS-1$ //$NON-NLS-2$
-                .claim("bitrix_workgroups", List.of("45")) //$NON-NLS-1$ //$NON-NLS-2$
+                .claim("permissions", Map.of("feature_flags", Map.of("is_app_admin", true), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                        "data_scope", Map.of())) //$NON-NLS-1$
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(3600))
                 .build());
@@ -92,7 +93,5 @@ public abstract class AbstractIntegrationTest
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl); //$NON-NLS-1$
         registry.add("spring.datasource.username", POSTGRES::getUsername); //$NON-NLS-1$
         registry.add("spring.datasource.password", POSTGRES::getPassword); //$NON-NLS-1$
-        // The test user (see authenticateAsIntranetEmployee) is a member of this admin workgroup.
-        registry.add("integration-hub.auth.admin-workgroups", () -> "45"); //$NON-NLS-1$ //$NON-NLS-2$
     }
 }
