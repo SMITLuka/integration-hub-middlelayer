@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,8 +41,10 @@ public class CurrentUserController
         String email = null;
         if (authentication.getPrincipal() instanceof Jwt jwt)
         {
-            name = jwt.getClaimAsString("name"); //$NON-NLS-1$
             email = jwt.getClaimAsString("email"); //$NON-NLS-1$
+            // The SSO gateway stores an empty display name for some users (e.g. TOTP partners).
+            String displayName = jwt.getClaimAsString("display_name"); //$NON-NLS-1$
+            name = StringUtils.hasText(displayName) ? displayName : email;
         }
         return ResponseEntity.ok(new CurrentUserDto(name, email, permissions));
     }

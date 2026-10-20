@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -29,13 +28,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The full permission matrix per endpoint, for an ordinary intranet employee and for a member of an
- * admin workgroup. Only the security rules are under test: the web slice contains just /me, so a
+ * The full permission matrix per endpoint, for an app user (SSO feature flag is_app_user) and for
+ * an app admin (feature flag is_app_admin). Only the security rules are under test: the web slice contains just /me, so a
  * request that passes security ends as 404/405, while a request that is blocked ends as 403.
  */
 @WebMvcTest(CurrentUserController.class)
 @Import({ GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class, PermissionPolicy.class })
-@TestPropertySource(properties = "integration-hub.auth.admin-workgroups=42") //$NON-NLS-1$
 class PermissionRulesTest
 {
     @Autowired
@@ -47,9 +45,11 @@ class PermissionRulesTest
     @BeforeEach
     void tokens()
     {
-        when(jwtDecoder.decode("employee")).thenReturn(jwt(Map.of("bitrix_user_type", "employee", "bitrix_workgroups", List.of("7")))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-        when(jwtDecoder.decode("admin")).thenReturn(jwt(Map.of("bitrix_user_type", "employee", "bitrix_workgroups", List.of("7", "42")))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
-        when(jwtDecoder.decode("extranet")).thenReturn(jwt(Map.of("bitrix_user_type", "extranet", "bitrix_workgroups", List.of("45")))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        when(jwtDecoder.decode("employee")).thenReturn(jwt("Luka Lozic", Map.of("is_app_user", true))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        when(jwtDecoder.decode("admin")).thenReturn(jwt("Luka Lozic", Map.of("is_app_admin", true))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        // Every signed-in SSO user can get a token for this app; companies alone grant nothing.
+        when(jwtDecoder.decode("noAccess")).thenReturn(jwt("Luka Lozic", Map.of())); //$NON-NLS-1$ //$NON-NLS-2$
+        when(jwtDecoder.decode("unnamed")).thenReturn(jwt("", Map.of("is_app_user", true))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     @ParameterizedTest(name = "{0} {1}: employee allowed={2}, admin allowed={3}")
@@ -97,7 +97,7 @@ class PermissionRulesTest
     {
         assertThat(isAllowed("employee", method, path)).as("employee").isEqualTo(employeeAllowed); //$NON-NLS-1$ //$NON-NLS-2$
         assertThat(isAllowed("admin", method, path)).as("admin").isEqualTo(adminAllowed); //$NON-NLS-1$ //$NON-NLS-2$
-        assertThat(isAllowed("extranet", method, path)).as("extranet").isFalse(); //$NON-NLS-1$ //$NON-NLS-2$
+        assertThat(isAllowed("noAccess", method, path)).as("noAccess").isFalse(); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Test
@@ -116,11 +116,26 @@ class PermissionRulesTest
     }
 
     @Test
-    void me_showsAllRightsForAdminWorkgroupMember() throws Exception
+    void me_showsAllRightsForAppAdmin() throws Exception
     {
         mockMvc.perform(get("/me").header("Authorization", "Bearer admin")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.permissions[*].delete").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is(true)))); //$NON-NLS-1$
+    }
+
+    @Test
+    void me_isForbidden_withoutIntegrationHubAccess() throws Exception
+    {
+        mockMvc.perform(get("/me").header("Authorization", "Bearer noAccess")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void me_showsEmailAsName_whenSsoHasNoDisplayName() throws Exception
+    {
+        mockMvc.perform(get("/me").header("Authorization", "Bearer unnamed")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("luka@example.test")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private boolean isAllowed(String token, String method, String path) throws Exception
@@ -134,17 +149,17 @@ class PermissionRulesTest
         return statusCode != 403;
     }
 
-    private static Jwt jwt(Map<String, Object> claims)
+    private static Jwt jwt(String displayName, Map<String, Object> featureFlags)
     {
         Instant now = Instant.now();
         return Jwt.withTokenValue("token") //$NON-NLS-1$
                 .header("alg", "RS256") //$NON-NLS-1$ //$NON-NLS-2$
                 .subject("7") //$NON-NLS-1$
-                .claim("name", "Luka Lozic") //$NON-NLS-1$ //$NON-NLS-2$
+                .claim("display_name", displayName) //$NON-NLS-1$
                 .claim("email", "luka@example.test") //$NON-NLS-1$ //$NON-NLS-2$
+                .claim("permissions", Map.of("feature_flags", featureFlags, "data_scope", Map.of("companies", List.of("SMIT")))) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(3600))
-                .claims(existing -> existing.putAll(claims))
                 .build();
     }
 }

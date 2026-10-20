@@ -16,7 +16,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,14 +28,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Runs the real security filter chain (with a mocked token decoder) against one representative
- * endpoint: a Bitrix login is required, and only intranet employees are let in.
+ * endpoint: an SSO login is required, and only users with an Integration Hub flag in SSO are let in.
  */
 @WebMvcTest(MandatorController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class, CorsConfig.class, PermissionPolicy.class})
 class SecurityConfigTest
 {
-    private static final String ISSUER = "https://mcp.sm-it.hr"; //$NON-NLS-1$
-    private static final String AUDIENCE = "https://integration-hub.example.test"; //$NON-NLS-1$
+    private static final String APP_ID = "e9e995e9-4046-43d0-ac03-ee3c563c9f7f"; //$NON-NLS-1$
+    private static final String JWKS_URI = "https://sso.example.test/.well-known/jwks.json"; //$NON-NLS-1$
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,9 +63,9 @@ class SecurityConfigTest
     }
 
     @Test
-    void request_returns200_forIntranetEmployee() throws Exception
+    void request_returns200_forUserWithIntegrationHubAccess() throws Exception
     {
-        givenToken(Map.of("bitrix_user_type", "employee", "bitrix_departments", List.of(1))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        givenToken(Map.of("is_app_user", true)); //$NON-NLS-1$
         when(mandatorService.list(any(), any())).thenReturn(Page.empty());
 
         mockMvc.perform(get("/mandators").header("Authorization", "Bearer user-token")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -74,23 +73,10 @@ class SecurityConfigTest
     }
 
     @Test
-    void request_returns403_forExtranetUser() throws Exception
+    void request_returns403_forSsoUserWithoutIntegrationHubFlag() throws Exception
     {
-        givenToken(Map.of("bitrix_user_type", "extranet", "bitrix_departments", List.of())); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        givenToken(Map.of());
 
-        mockMvc.perform(get("/mandators").header("Authorization", "Bearer user-token")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void request_usesDepartments_whenBitrixSendsNoUserType() throws Exception
-    {
-        givenToken(Map.of("bitrix_departments", List.of(5))); //$NON-NLS-1$
-        when(mandatorService.list(any(), any())).thenReturn(Page.empty());
-        mockMvc.perform(get("/mandators").header("Authorization", "Bearer user-token")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                .andExpect(status().isOk());
-
-        givenToken(Map.of("bitrix_departments", List.of())); //$NON-NLS-1$
         mockMvc.perform(get("/mandators").header("Authorization", "Bearer user-token")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
                 .andExpect(status().isForbidden());
     }
@@ -107,48 +93,43 @@ class SecurityConfigTest
     }
 
     @Test
-    void tokenValidator_acceptsOwnAudience_rejectsOtherAudienceAndIssuer()
+    void tokenValidator_acceptsTokenForThisApp_rejectsOtherAppAndPortalTokens()
     {
-        OAuth2TokenValidator<Jwt> validator = SecurityConfig.tokenValidator(ISSUER, AUDIENCE, "integration-hub"); //$NON-NLS-1$
+        OAuth2TokenValidator<Jwt> validator = SecurityConfig.tokenValidator(APP_ID);
 
-        assertThat(validator.validate(jwt(ISSUER, AUDIENCE, Map.of())).hasErrors()).isFalse();
-        assertThat(validator.validate(jwt(ISSUER, "https://mcp.sm-it.hr/mcp", Map.of())).hasErrors()).isTrue(); //$NON-NLS-1$
-        assertThat(validator.validate(jwt("https://evil.example.test", AUDIENCE, Map.of())).hasErrors()).isTrue(); //$NON-NLS-1$
+        assertThat(validator.validate(jwt(APP_ID, Map.of())).hasErrors()).isFalse();
+        // e.g. a token the gateway issued for SMIT Pulse
+        assertThat(validator.validate(jwt("d74c5004-8a63-48c9-b54b-3be0b3154b3f", Map.of())).hasErrors()).isTrue(); //$NON-NLS-1$
+        // portal-only tokens carry no app_id at all
+        assertThat(validator.validate(jwt(null, Map.of())).hasErrors()).isTrue();
     }
 
     @Test
-    void tokenValidator_rejectsTokenIssuedToAnotherClient()
+    void jwtDecoder_refusesToStart_whenAppIdIsBlank()
     {
-        OAuth2TokenValidator<Jwt> validator = SecurityConfig.tokenValidator(ISSUER, AUDIENCE, "integration-hub"); //$NON-NLS-1$
-
-        assertThat(validator.validate(jwt(ISSUER, AUDIENCE, Map.of("client_id", "some-dcr-client"))).hasErrors()).isTrue(); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
-    @Test
-    void jwtDecoder_refusesToStart_whenAudienceIsBlank()
-    {
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new SecurityConfig().jwtDecoder(ISSUER, " ", "integration-hub")) //$NON-NLS-1$ //$NON-NLS-2$
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new SecurityConfig().jwtDecoder(JWKS_URI, " ")) //$NON-NLS-1$
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("AUTH_AUDIENCE"); //$NON-NLS-1$
+                .hasMessageContaining("SSO_APP_ID"); //$NON-NLS-1$
     }
 
-    private void givenToken(Map<String, Object> claims)
+    private void givenToken(Map<String, Object> featureFlags)
     {
-        when(jwtDecoder.decode("user-token")).thenReturn(jwt(ISSUER, AUDIENCE, claims)); //$NON-NLS-1$
+        when(jwtDecoder.decode("user-token")).thenReturn(jwt(APP_ID, featureFlags)); //$NON-NLS-1$
     }
 
-    private static Jwt jwt(String issuer, String audience, Map<String, Object> claims)
+    private static Jwt jwt(String appId, Map<String, Object> featureFlags)
     {
         Instant now = Instant.now();
-        return Jwt.withTokenValue("token") //$NON-NLS-1$
+        Jwt.Builder builder = Jwt.withTokenValue("token") //$NON-NLS-1$
                 .header("alg", "RS256") //$NON-NLS-1$ //$NON-NLS-2$
-                .issuer(issuer)
-                .audience(List.of(audience))
                 .subject("1") //$NON-NLS-1$
-                .claim("client_id", "integration-hub") //$NON-NLS-1$ //$NON-NLS-2$
+                .claim("permissions", Map.of("feature_flags", featureFlags, "data_scope", Map.of())) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
                 .issuedAt(now)
-                .expiresAt(now.plusSeconds(3600))
-                .claims(existing -> existing.putAll(claims))
-                .build();
+                .expiresAt(now.plusSeconds(3600));
+        if (appId != null)
+        {
+            builder.claim("app_id", appId); //$NON-NLS-1$
+        }
+        return builder.build();
     }
 }

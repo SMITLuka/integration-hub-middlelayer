@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Runs a test as an employee with every right on every level (as a member of an admin workgroup),
+ * Runs a test with every right on every level (as an app admin, SSO feature flag is_app_admin),
  * for tests that exercise controller behaviour rather than permissions.
  */
 @Retention(RetentionPolicy.RUNTIME)
