@@ -15,6 +15,10 @@ spring:
     locations: classpath:db/migration
 
 integration-hub:
+  service-api:
+    # API keys for the machine-to-machine API under /service/** (header X-Api-Key), comma separated.
+    # Empty = the service API rejects every request.
+    keys: ${SERVICE_API_KEYS:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   auth:

@@ -14,6 +14,8 @@ public interface InterfaceRepository extends JpaRepository<Interface, Long>
 
     Optional<Interface> findByName(String name);
 
+    Optional<Interface> findByNameIgnoreCase(String name);
+
     @Query("select count(distinct i.id) from Interface i "
             + "where exists (select 1 from MappingTemplate mt where mt.interfaceEntity = i) "
             + "or exists (select 1 from ConfigurationTemplate ct where ct.interfaceEntity = i)") //$NON-NLS-1$

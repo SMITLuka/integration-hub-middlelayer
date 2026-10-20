@@ -13,6 +13,8 @@ public interface MandatorRepository extends JpaRepository<Mandator, Long>
 
     Optional<Mandator> findByExternalMandatorId(String externalMandatorId);
 
+    Optional<Mandator> findByExternalMandatorIdIgnoreCase(String externalMandatorId);
+
     @org.springframework.data.jpa.repository.Query(
             "select count(distinct c.mandator.id) from Company c") //$NON-NLS-1$
     long countMandatorsWithAtLeastOneCompany();
